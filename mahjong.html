@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>麻將賽事統計系統</title>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="麻將統計">
+<meta name="theme-color" content="#1a1a18">
 <style>
   :root {
     --bg: #f7f6f3;
@@ -511,7 +517,6 @@ function renderRank() {
     }).join('');
   }
 
-  // 自摸排行
   var zimoSorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
     .map(function(e) {
       var p = e[0], s = e[1];
@@ -704,7 +709,7 @@ function exportExcel() {
   });
   totalRow.push('');
   rows.push(totalRow);
-  var csv = '\uFEFF' + rows.map(function(row) {
+  var csv = '﻿' + rows.map(function(row) {
     return row.map(function(cell) {
       var s = String(cell === null || cell === undefined ? '' : cell);
       if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
@@ -727,6 +732,12 @@ function exportExcel() {
 
 document.getElementById('e-date').value = new Date().toISOString().split('T')[0];
 load();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').catch(function() {});
+  });
+}
 </script>
 </body>
 </html>
