@@ -185,8 +185,9 @@
   <button class="nav-btn on" onclick="goTab('entry',this)">＋ 新增紀錄</button>
   <button class="nav-btn" onclick="goTab('rank',this)">🏆 排行榜</button>
   <button class="nav-btn" onclick="goTab('rec',this)">☰ 所有紀錄</button>
-  <button class="nav-btn" onclick="goTab('mgr',this)">⚙ 參賽者管理</button>
+  <button class="nav-btn" onclick="goTab('profile',this)">👤 選手資料</button>
   <button class="nav-btn" onclick="goTab('rules',this)">📖 台數對照表</button>
+  <button class="nav-btn" onclick="goTab('mgr',this)">⚙ 參賽者管理</button>
 </nav>
 
 <div class="main">
@@ -279,16 +280,51 @@
     <div id="v-det" style="display:none"></div>
   </div>
 
-  <!-- 參賽者管理 -->
-  <div id="pg-mgr" class="pg">
-    <div class="card">
-      <div class="card-title">參賽者名單（最多8位）</div>
-      <div class="plist" id="p-list"></div>
-      <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="p-new" placeholder="新增參賽者姓名" style="max-width:200px">
-        <button class="btn btn-primary" onclick="addP()">新增</button>
+  <!-- 選手個人資料 -->
+  <div id="pg-profile" class="pg">
+
+    <!-- 選手資料彈窗 -->
+    <div id="profile-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px">
+      <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:480px;width:100%;position:relative;margin:auto">
+        <button onclick="closeProfileModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:22px;cursor:pointer;color:var(--text2)">✕</button>
+
+        <!-- 大頭照 -->
+        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px">
+          <div id="pm-avatar" style="width:96px;height:96px;border-radius:50%;background:var(--bg);border:2px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:12px">👤</div>
+          <label style="cursor:pointer;font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);padding:5px 14px;border-radius:8px">
+            📷 上傳大頭照
+            <input type="file" accept="image/*" id="pm-upload" style="display:none" onchange="uploadAvatar(this)">
+          </label>
+          <div id="pm-upload-status" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+        </div>
+
+        <!-- 姓名 -->
+        <div style="font-size:20px;font-weight:700;text-align:center;margin-bottom:4px" id="pm-name"></div>
+        <div style="text-align:center;margin-bottom:16px">
+          <span id="pm-rank-badge" style="font-size:12px;font-weight:600;padding:3px 12px;border-radius:999px;background:var(--amber-bg);color:var(--amber)"></span>
+        </div>
+
+        <!-- 個人簡介 -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">個人簡介</div>
+          <textarea id="pm-bio" rows="3" placeholder="輸入個人簡介..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;resize:none;color:var(--text);background:var(--bg)"></textarea>
+        </div>
+
+        <!-- 個人統計 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">個人戰績</div>
+        <div id="pm-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
+
+        <!-- 近期紀錄 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">近期5場</div>
+        <div id="pm-recent"></div>
+
+        <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;margin-top:16px">💾 儲存資料</button>
       </div>
     </div>
+
+    <!-- 選手卡片列表 -->
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">點擊選手卡片查看個人資料與戰績</div>
+    <div id="profile-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px"></div>
   </div>
 
   <!-- 台數對照表 -->
@@ -308,6 +344,18 @@
     <div id="rules-content"></div>
   </div>
 
+  <!-- 參賽者管理 -->
+  <div id="pg-mgr" class="pg">
+    <div class="card">
+      <div class="card-title">參賽者名單（最多8位）</div>
+      <div class="plist" id="p-list"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="p-new" placeholder="新增參賽者姓名" style="max-width:200px">
+        <button class="btn btn-primary" onclick="addP()">新增</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -316,6 +364,10 @@ var BIN_ID = '69fef118250b1311c3258d94';
 var API_KEY = '$2a$10$vXNSb0IG/J6l2iaqedRwEO/.LRfZZ2p/OFLPE7Zveg2BI7v7LFl3K';
 var BASE = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
 var P = [], R = [], curView = 'sum';
+var PROFILES = {};
+var currentProfilePlayer = null;
+var CLOUD_NAME = 'dgvkudiqi';
+var UPLOAD_PRESET = 'mahjong_upload';
 
 function tip(m) {
   var t = document.getElementById('toast');
@@ -362,11 +414,13 @@ async function load() {
     var data = await apiGet();
     P = data.players || ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
     R = data.records || [];
+    PROFILES = data.profiles || {};
     setSyncStatus('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'}));
   } catch(e) {
     setSyncStatus('err', '連線失敗');
     P = ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
     R = [];
+    PROFILES = {};
     tip('⚠ 無法連線至資料庫');
   }
   buildEntry();
@@ -375,7 +429,7 @@ async function load() {
 async function saveAll() {
   setSyncStatus('loading', '儲存中...');
   try {
-    await apiPut({ players: P, records: R });
+    await apiPut({ players: P, records: R, profiles: PROFILES });
     setSyncStatus('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'}));
   } catch(e) {
     setSyncStatus('err', '儲存失敗');
@@ -392,6 +446,7 @@ function goTab(id, el) {
   if (id === 'rec') { buildRecFilter(); renderRec(); }
   if (id === 'mgr') renderMgr();
   if (id === 'rules') renderRules();
+  if (id === 'profile') renderProfileGrid();
 }
 
 function switchView(v, el) {
@@ -730,7 +785,7 @@ function exportExcel() {
   });
   totalRow.push('');
   rows.push(totalRow);
-  var csv = '\uFEFF' + rows.map(function(row) {
+  var csv = '﻿' + rows.map(function(row) {
     return row.map(function(cell) {
       var s = String(cell === null || cell === undefined ? '' : cell);
       if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
@@ -749,6 +804,165 @@ function exportExcel() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   tip('✓ Excel 檔案已下載：麻將賽事紀錄_' + dateStr + '.csv');
+}
+
+// ── 選手資料 ──
+function getPlayerStats(name) {
+  var st = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null, recent: [] };
+  var sorted = R.slice().sort(function(a,b){ return b.date.localeCompare(a.date)||b.id-a.id; });
+  sorted.forEach(function(r) {
+    if (!(name in r.sc)) return;
+    var v = r.sc[name], fv = (r.fe && r.fe[name]) || 0;
+    st.sc += v; st.fe += fv; st.g++;
+    if (v > 0) st.w++;
+    if (st.best === null || v > st.best) st.best = v;
+    if (st.worst === null || v < st.worst) st.worst = v;
+    if (st.recent.length < 5) st.recent.push({ date: r.date, ses: r.ses, sc: v, fe: fv });
+  });
+  return st;
+}
+
+function getRankAmong(name) {
+  var all = P.map(function(p) {
+    var s = getPlayerStats(p);
+    return { p: p, net: f2(s.sc - s.fe), g: s.g };
+  }).filter(function(x){ return x.g > 0; })
+    .sort(function(a,b){ return b.net - a.net; });
+  var idx = all.findIndex(function(x){ return x.p === name; });
+  return idx >= 0 ? (idx + 1) : null;
+}
+
+function renderProfileGrid() {
+  var grid = document.getElementById('profile-grid');
+  grid.innerHTML = P.map(function(p) {
+    var st = getPlayerStats(p);
+    var net = f2(st.sc - st.fe);
+    var prof = PROFILES[p] || {};
+    var avatar = prof.avatar
+      ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+      : '<span style="font-size:32px">👤</span>';
+    var netColor = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : 'var(--text2)';
+    var safeName = p.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    return '<div onclick="openProfile(this.dataset.p)" data-p="' + safeName + '" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;text-align:center;transition:all .15s" onmouseover="this.style.borderColor=\'var(--border2)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+      '<div style="width:64px;height:64px;border-radius:50%;background:var(--bg);border:2px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">' + avatar + '</div>' +
+      '<div style="font-size:14px;font-weight:700;margin-bottom:4px">' + p + '</div>' +
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">' + st.g + ' 場出賽</div>' +
+      '<div style="font-size:16px;font-weight:700;color:' + netColor + '">' + (net >= 0 ? '+' : '') + net + '</div>' +
+      '<div style="font-size:10px;color:var(--text2);margin-top:2px">實際淨值</div>' +
+      '</div>';
+  }).join('');
+}
+
+function openProfile(name) {
+  currentProfilePlayer = name;
+  var prof = PROFILES[name] || {};
+  var st = getPlayerStats(name);
+  var rank = getRankAmong(name);
+
+  var avatarEl = document.getElementById('pm-avatar');
+  avatarEl.innerHTML = prof.avatar
+    ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+    : '👤';
+
+  document.getElementById('pm-name').textContent = name;
+  var badge = document.getElementById('pm-rank-badge');
+  if (rank) {
+    var medals = ['🥇 第1名','🥈 第2名','🥉 第3名'];
+    badge.textContent = rank <= 3 ? medals[rank-1] : '第' + rank + '名';
+    badge.style.background = rank === 1 ? 'var(--amber-bg)' : rank === 2 ? '#f1efe8' : rank === 3 ? 'var(--red-bg)' : 'var(--bg)';
+    badge.style.color = rank === 1 ? 'var(--amber)' : rank === 2 ? '#555' : rank === 3 ? 'var(--red)' : 'var(--text2)';
+  } else {
+    badge.textContent = '尚無出賽紀錄';
+    badge.style.background = 'var(--bg)';
+    badge.style.color = 'var(--text2)';
+  }
+
+  document.getElementById('pm-bio').value = prof.bio || '';
+  document.getElementById('pm-upload-status').textContent = '';
+
+  var net = f2(st.sc - st.fe);
+  var wr = st.g ? Math.round(st.w / st.g * 100) : 0;
+  document.getElementById('pm-stats').innerHTML = [
+    { l: '出賽場次', v: st.g + ' 場', c: '' },
+    { l: '輸贏合計', v: fs(st.sc), c: st.sc > 0 ? 'var(--green)' : st.sc < 0 ? 'var(--red)' : '' },
+    { l: '實際淨值', v: fs(net), c: net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '' },
+    { l: '總參賽費', v: '-' + f2(st.fe), c: 'var(--red)' },
+    { l: '勝場率', v: st.w + '勝(' + wr + '%)', c: wr >= 50 ? 'var(--green)' : '' },
+    { l: '最佳單場', v: st.best !== null ? (st.best >= 0 ? '+' : '') + st.best : '-', c: 'var(--green)' }
+  ].map(function(x) {
+    return '<div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
+      '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">' + x.l + '</div>' +
+      '<div style="font-size:13px;font-weight:700' + (x.c ? ';color:' + x.c : '') + '">' + x.v + '</div></div>';
+  }).join('');
+
+  if (st.recent.length === 0) {
+    document.getElementById('pm-recent').innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0">尚無比賽紀錄</div>';
+  } else {
+    document.getElementById('pm-recent').innerHTML = st.recent.map(function(r) {
+      var nt = f2(r.sc - r.fe);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<div><div style="font-size:12px;font-weight:500">' + r.date + ' ' + r.ses + '</div>' +
+        '<div style="font-size:11px;color:var(--text2)">參賽費 ' + r.fe + '</div></div>' +
+        '<div style="text-align:right">' +
+        '<div style="font-size:13px;font-weight:700;color:' + (r.sc > 0 ? 'var(--green)' : r.sc < 0 ? 'var(--red)' : 'var(--text2)') + '">' + fs(r.sc) + '</div>' +
+        '<div style="font-size:11px;color:' + (nt > 0 ? 'var(--green)' : nt < 0 ? 'var(--red)' : 'var(--text2)') + '">淨 ' + fs(nt) + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  document.getElementById('profile-modal').style.display = 'flex';
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').style.display = 'none';
+  currentProfilePlayer = null;
+}
+
+document.getElementById('profile-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeProfileModal();
+});
+
+async function uploadAvatar(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var statusEl = document.getElementById('pm-upload-status');
+  statusEl.textContent = '上傳中...';
+  statusEl.style.color = 'var(--text2)';
+
+  var formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', UPLOAD_PRESET);
+  formData.append('folder', 'mahjong_avatars');
+
+  try {
+    var res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+      method: 'POST',
+      body: formData
+    });
+    var data = await res.json();
+    if (data.secure_url) {
+      var url = data.secure_url;
+      document.getElementById('pm-avatar').innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover">';
+      if (!PROFILES[currentProfilePlayer]) PROFILES[currentProfilePlayer] = {};
+      PROFILES[currentProfilePlayer].avatar = url;
+      statusEl.textContent = '✓ 上傳成功';
+      statusEl.style.color = 'var(--green)';
+    } else {
+      throw new Error('上傳失敗');
+    }
+  } catch(e) {
+    statusEl.textContent = '✗ 上傳失敗，請重試';
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+async function saveProfile() {
+  if (!currentProfilePlayer) return;
+  if (!PROFILES[currentProfilePlayer]) PROFILES[currentProfilePlayer] = {};
+  PROFILES[currentProfilePlayer].bio = document.getElementById('pm-bio').value;
+  await saveAll();
+  tip('✓ 個人資料已儲存');
+  renderProfileGrid();
 }
 
 var RULES = [
@@ -832,6 +1046,18 @@ document.getElementById('rule-modal').addEventListener('click', function(e) {
 
 document.getElementById('e-date').value = new Date().toISOString().split('T')[0];
 load();
+
+var _nav = document.querySelector('.nav');
+var _nx, _ny;
+_nav.addEventListener('touchstart', function(e) {
+  _nx = e.touches[0].clientX;
+  _ny = e.touches[0].clientY;
+}, { passive: true });
+_nav.addEventListener('touchmove', function(e) {
+  var dx = Math.abs(e.touches[0].clientX - _nx);
+  var dy = Math.abs(e.touches[0].clientY - _ny);
+  if (dx > dy) e.preventDefault();
+}, { passive: false });
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {

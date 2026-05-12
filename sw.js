@@ -1,4 +1,4 @@
-var CACHE = 'mahjong-v3';
+var CACHE = 'mahjong-v5';
 var SHELL = ['./mahjong.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', function(e) {
