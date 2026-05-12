@@ -1,4 +1,4 @@
-var CACHE = 'mahjong-v7';
+var CACHE = 'mahjong-v8';
 var SHELL = ['./mahjong.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', function(e) {
@@ -7,7 +7,14 @@ self.addEventListener('install', function(e) {
 });
 
 self.addEventListener('activate', function(e) {
-  e.waitUntil(clients.claim());
+  e.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE; })
+            .map(function(k) { return caches.delete(k); })
+      );
+    }).then(function() { return clients.claim(); })
+  );
 });
 
 self.addEventListener('fetch', function(e) {
