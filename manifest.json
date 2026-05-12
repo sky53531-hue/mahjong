@@ -1,7 +1,7 @@
 {
-  "name": "麻將賽事統計系統",
-  "short_name": "麻將統計",
-  "description": "追蹤麻將比賽成績與排行榜",
+  "name": "柒樓麻將館",
+  "short_name": "柒樓麻將館",
+  "description": "柒樓麻將館賽事統計系統",
   "start_url": "./mahjong.html",
   "display": "standalone",
   "background_color": "#f7f6f3",

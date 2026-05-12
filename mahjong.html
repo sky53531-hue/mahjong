@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>麻將賽事統計系統</title>
+<title>柒樓麻將館</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="麻將統計">
+<meta name="apple-mobile-web-app-title" content="柒樓麻將館">
 <meta name="theme-color" content="#1a1a18">
 <style>
   :root {
@@ -166,7 +166,7 @@
 <body>
 
 <header class="app-header">
-  <div class="app-title"><span>🀄</span> 麻將賽事統計系統</div>
+  <div class="app-title"><span>🀄</span> 柒樓麻將館</div>
   <div style="display:flex;align-items:center;gap:12px">
     <button onclick="exportBackup()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;color:var(--text2)">
       ⬇ 備份JSON
@@ -347,7 +347,7 @@
   <!-- 參賽者管理 -->
   <div id="pg-mgr" class="pg">
     <div class="card">
-      <div class="card-title">參賽者名單（最多8位）</div>
+      <div class="card-title">參賽者名單</div>
       <div class="plist" id="p-list"></div>
       <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
         <input type="text" id="p-new" placeholder="新增參賽者姓名" style="max-width:200px">
@@ -716,7 +716,7 @@ function renderMgr() {
 async function updP(i, v) { P[i] = v; await saveAll(); buildEntry(); }
 async function addP() {
   var v = document.getElementById('p-new').value.trim();
-  if (!v) return; if (P.length >= 8) { alert('最多8位'); return; }
+  if (!v) return;
   P.push(v); document.getElementById('p-new').value = '';
   await saveAll(); renderMgr(); buildEntry();
 }
