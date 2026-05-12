@@ -43,8 +43,8 @@
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
 
   /* Nav */
-  .nav { display: flex; gap: 4px; padding: 16px 24px 0; border-bottom: 1px solid var(--border); background: var(--surface); }
-  .nav-btn { padding: 8px 18px; border-radius: var(--radius) var(--radius) 0 0; border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 13px; color: var(--text2); font-weight: 500; border-bottom: none; transition: all .15s; }
+  .nav { display: flex; gap: 4px; padding: 12px 16px 0; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .nav-btn { padding: 7px 14px; border-radius: var(--radius) var(--radius) 0 0; border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 12px; color: var(--text2); font-weight: 500; border-bottom: none; transition: all .15s; white-space: nowrap; flex-shrink: 0; }
   .nav-btn:hover { background: var(--bg); color: var(--text); }
   .nav-btn.on { background: var(--bg); color: var(--text); border-color: var(--border); border-bottom-color: var(--bg); position: relative; top: 1px; }
 
@@ -186,6 +186,7 @@
   <button class="nav-btn" onclick="goTab('rank',this)">🏆 排行榜</button>
   <button class="nav-btn" onclick="goTab('rec',this)">☰ 所有紀錄</button>
   <button class="nav-btn" onclick="goTab('mgr',this)">⚙ 參賽者管理</button>
+  <button class="nav-btn" onclick="goTab('rules',this)">📖 台數對照表</button>
 </nav>
 
 <div class="main">
@@ -290,6 +291,23 @@
     </div>
   </div>
 
+  <!-- 台數對照表 -->
+  <div id="pg-rules" class="pg">
+
+    <!-- 彈窗 -->
+    <div id="rule-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;position:relative">
+        <button onclick="closeModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>
+        <div id="modal-tai" style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:6px"></div>
+        <div id="modal-name" style="font-size:20px;font-weight:700;margin-bottom:12px"></div>
+        <div id="modal-desc" style="font-size:14px;line-height:1.8;color:var(--text)"></div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">點擊牌型可查看詳細說明</div>
+    <div id="rules-content"></div>
+  </div>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -373,6 +391,7 @@ function goTab(id, el) {
   if (id === 'rank') renderRank();
   if (id === 'rec') { buildRecFilter(); renderRec(); }
   if (id === 'mgr') renderMgr();
+  if (id === 'rules') renderRules();
 }
 
 function switchView(v, el) {
@@ -518,6 +537,7 @@ function renderRank() {
     }).join('');
   }
 
+  // 自摸排行
   var zimoSorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
     .map(function(e) {
       var p = e[0], s = e[1];
@@ -710,7 +730,7 @@ function exportExcel() {
   });
   totalRow.push('');
   rows.push(totalRow);
-  var csv = '﻿' + rows.map(function(row) {
+  var csv = '\uFEFF' + rows.map(function(row) {
     return row.map(function(cell) {
       var s = String(cell === null || cell === undefined ? '' : cell);
       if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
@@ -730,6 +750,85 @@ function exportExcel() {
   URL.revokeObjectURL(url);
   tip('✓ Excel 檔案已下載：麻將賽事紀錄_' + dateStr + '.csv');
 }
+
+var RULES = [
+  { tai: 1, color: '#e8a020', bg: '#fef9ee', items: [
+    { name: '門清', desc: '胡牌時，沒有吃牌、碰牌、明積。' },
+    { name: '自摸', desc: '胡牌的牌由自己摸進。' },
+    { name: '搶槓', desc: '聽牌時，因別人加槓而加槓的那張牌，恰巧是可以胡的牌。' },
+    { name: '獨聽', desc: '邊張、中洞、單吊。' },
+    { name: '槓上開花', desc: '因摸到花牌、暗槓或加槓而補牌，補牌後恰巧胡牌。' },
+    { name: '海底撈月', desc: '摸牌盡最後一張，而自摸者多計一台。因摸到花牌或加槓造成其結果為最後一張牌時，亦以海底撈月計之。' }
+  ]},
+  { tai: 2, color: '#2d8a4e', bg: '#edf7f1', items: [
+    { name: '平胡', desc: '胡牌由五組順子及一個對子組成，胡他人牌非自摸。牌中無字、花牌、呈兩面聽牌狀態。釣將不算。' },
+    { name: '全求', desc: '手牌只剩一張牌單吊胡牌，而其餘全吃或碰，且胡他人牌。' },
+    { name: '三暗刻', desc: '手牌裡，有三組刻子（包括暗槓）。' }
+  ]},
+  { tai: 4, color: '#1a6aaa', bg: '#eaf3fc', items: [
+    { name: '地聽', desc: '在無人吃碰情況下，配牌後打出第一張牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
+    { name: '碰碰胡', desc: '胡牌全部由刻子再加一個對子組成。' },
+    { name: '小三元', desc: '胡牌者中、發、白其中二組是刻子一組是對子。' },
+    { name: '混一色', desc: '胡牌者只有一種數牌，及字牌混合所組成。' }
+  ]},
+  { tai: 5, color: '#7b3ab0', bg: '#f5eefb', items: [
+    { name: '四暗刻', desc: '胡牌時，手牌裡有四組刻子。' }
+  ]},
+  { tai: 8, color: '#c0392b', bg: '#fdf0ef', items: [
+    { name: '天聽', desc: '配牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
+    { name: '五暗刻', desc: '胡牌時，手牌裡有五組刻子。' },
+    { name: '大三元', desc: '胡牌時，有中、發、白三組刻子。' },
+    { name: '小四喜', desc: '胡牌者完成東、南、西、北其中三組刻子，一組對子。' },
+    { name: '清一色', desc: '整副牌為同一花色所組成，由筒、條或萬所組成的牌。' },
+  ]},
+  { tai: 16, color: '#8b0000', bg: '#fdf0f0', items: [
+    { name: '天胡', desc: '莊家取完牌後，已經胡牌，稱為天胡。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
+    { name: '人胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，胡他人牌，算清16台，不得加計門清、天地聽。其餘另計。' },
+    { name: '地胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，開家於此巡內第一次摸牌即自摸胡，算清16台，不得加計自摸、門清、不求、天地聽。其餘另計。' },
+    { name: '大四喜', desc: '手牌(含已露牌)有風牌之4種刻(槓)子，不分明暗，算清16台，不得加計門風、圈風台。其餘另計。' }
+  ]}
+];
+
+var currentModal = null;
+
+function renderRules() {
+  var html = '';
+  for (var g = 0; g < RULES.length; g++) {
+    var group = RULES[g];
+    var btns = '';
+    for (var i = 0; i < group.items.length; i++) {
+      btns += '<button data-g="' + g + '" data-i="' + i + '" onclick="showModal(this.dataset.g, this.dataset.i)" ' +
+        'style="padding:8px 14px;border-radius:8px;border:1px solid ' + group.color + '44;' +
+        'background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;color:var(--text);transition:all .15s">' +
+        group.items[i].name + '</button>';
+    }
+    html += '<div style="margin-bottom:22px">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+      '<span style="background:' + group.color + ';color:#fff;font-size:14px;font-weight:700;padding:4px 16px;border-radius:999px">' + group.tai + ' 台</span>' +
+      '<div style="flex:1;height:1px;background:' + group.color + '44"></div></div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">' + btns + '</div></div>';
+  }
+  document.getElementById('rules-content').innerHTML = html;
+}
+
+function showModal(gIdx, iIdx) {
+  var group = RULES[parseInt(gIdx)];
+  var item = group.items[parseInt(iIdx)];
+  document.getElementById('modal-tai').textContent = group.tai + ' 台';
+  document.getElementById('modal-tai').style.color = group.color;
+  document.getElementById('modal-name').textContent = item.name;
+  document.getElementById('modal-desc').textContent = item.desc;
+  var modal = document.getElementById('rule-modal');
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('rule-modal').style.display = 'none';
+}
+
+document.getElementById('rule-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
 
 document.getElementById('e-date').value = new Date().toISOString().split('T')[0];
 load();
