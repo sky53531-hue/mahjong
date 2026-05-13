@@ -1,5 +1,5 @@
-var CACHE = 'mahjong-v9';
-var SHELL = ['./mahjong.html', './manifest.json', './icon.svg'];
+var CACHE = 'mahjong-v10';
+var SHELL = ['./manifest.json', './icon.svg'];
 
 self.addEventListener('install', function(e) {
   e.waitUntil(caches.open(CACHE).then(function(c) { return c.addAll(SHELL); }));
@@ -18,8 +18,19 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
-  // JSONBin API calls always go to network
   if (e.request.url.indexOf('jsonbin.io') >= 0) return;
+
+  // HTML 頁面：網路優先，離線時才用快取
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(function() {
+        return caches.match(e.request);
+      })
+    );
+    return;
+  }
+
+  // 其他資源（icon、manifest）：快取優先
   e.respondWith(
     caches.match(e.request).then(function(r) {
       return r || fetch(e.request);
