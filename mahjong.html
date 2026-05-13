@@ -1067,11 +1067,17 @@ var RULES = [
     { name: '搶槓', desc: '聽牌時，因別人加槓而加槓的那張牌，恰巧是可以胡的牌。' },
     { name: '獨聽', desc: '邊張、中洞、單吊。' },
     { name: '槓上開花', desc: '因摸到花牌、暗槓或加槓而補牌，補牌後恰巧胡牌。' },
-    { name: '海底撈月', desc: '摸牌盡最後一張，而自摸者多計一台。因摸到花牌或加槓造成其結果為最後一張牌時，亦以海底撈月計之。' }
+    { name: '海底撈月', desc: '摸牌盡最後一張，而自摸者多計一台。因摸到花牌或加槓造成其結果為最後一張牌時，亦以海底撈月計之。' },
+    { name: '圈風刻', desc: '本局莊風牌（東南西北）刻子，不分明暗，1台。大四喜時不計。' },
+    { name: '門風刻', desc: '自己座位風牌（東南西北）刻子，不分明暗，1台。大四喜時不計。' },
+    { name: '中刻',  desc: '中牌三組刻子，不分明暗，1台。' },
+    { name: '發刻',  desc: '發牌三組刻子，不分明暗，1台。' },
+    { name: '白刻',  desc: '白板三組刻子，不分明暗，1台。' },
+    { name: '半求',  desc: '手牌只剩一張單吊自摸胡，其餘全吃或碰，1台。' }
   ]},
   { tai: 2, color: '#2d8a4e', bg: '#edf7f1', items: [
     { name: '平胡', desc: '胡牌由五組順子及一個對子組成，胡他人牌非自摸。牌中無字、花牌、呈兩面聽牌狀態。釣將不算。' },
-    { name: '全求', desc: '手牌只剩一張牌單吊胡牌，而其餘全吃或碰，且胡他人牌。' },
+    { name: '全求', desc: '手牌只剩一張牌單吊胡牌，而其餘全吃或碰，且胡他人牌（非自摸）。' },
     { name: '三暗刻', desc: '手牌裡，有三組刻子（包括暗槓）。' }
   ]},
   { tai: 4, color: '#1a6aaa', bg: '#eaf3fc', items: [
@@ -1134,6 +1140,9 @@ var CTX_DEFS = [
   { id:'gskh', name:'槓上開花', tai:1, color:'#2d8a4e', desc:'因摸花牌、暗槓或加槓補牌後恰巧胡牌。' },
   { id:'hdly', name:'海底撈月', tai:1, color:'#2d8a4e', desc:'摸牌盡最後一張而自摸。' },
   { id:'ph',   name:'平胡',    tai:2,  color:'#1a6aaa', desc:'五組順子加一個對子，胡他人牌非自摸，無字花牌，兩面聽牌。釣將不算。' },
+  { id:'qfk',  name:'圈風刻',  tai:1,  color:'#2d8a4e', desc:'本局莊風牌刻子，不分明暗，1台。大四喜時不計。' },
+  { id:'mfk',  name:'門風刻',  tai:1,  color:'#2d8a4e', desc:'自己座位風牌刻子，不分明暗，1台。大四喜時不計。' },
+  { id:'bq',   name:'半求',    tai:1,  color:'#2d8a4e', desc:'手牌只剩一張單吊自摸胡，其餘全吃或碰。' },
   { id:'qq',   name:'全求',    tai:2,  color:'#1a6aaa', desc:'手牌只剩一張單吊胡他人牌，其餘全吃或碰。' },
   { id:'dit',  name:'地聽',    tai:4,  color:'#7b3ab0', desc:'無人吃碰情況下，打出第一張牌即聽牌，門清不求不能算，可加計自摸。' },
   { id:'tt',   name:'天聽',    tai:8,  color:'#c0392b', desc:'配牌即聽牌，門清不求不能算，可加計自摸。' },
@@ -1148,7 +1157,9 @@ var CTX_EXCL = {
   'dgh': ['zm','tt','dit'],
   'ph':  ['zm'],
   'tt':  ['dit'],
-  'dit': ['tt']
+  'dit': ['tt'],
+  'qq':  ['zm','bq'],
+  'bq':  ['qq']
 };
 
 var calcRendered = false;
@@ -1316,6 +1327,11 @@ function detectPatterns() {
     found.push({ name:'小三元', tai:4, color:'#7b3ab0' });
   }
 
+  // 三元牌刻子（中/發/白）：不分明暗，各1台
+  if (ca[45] >= 3) found.push({ name:'中刻',  tai:1, color:'#c0392b' });
+  if (ca[46] >= 3) found.push({ name:'發刻',  tai:1, color:'#2d6a2d' });
+  if (ca[47] >= 3) found.push({ name:'白刻',  tai:1, color:'#6b6960' });
+
   // 暗刻數：只計算手牌（暗牌）裡同一張牌出現3張以上的組數
   var ankeCount = 0;
   Object.keys(ch).forEach(function(tk) {
@@ -1388,12 +1404,25 @@ function recomputeCtxLocks() {
 }
 
 function calcAnalyze() {
+  recomputeCtxLocks();
   var autoPats = detectPatterns();
   var autoTai = autoPats.reduce(function(s, p) { return s + p.tai; }, 0);
+
+  // 大四喜 suppresses 圈風刻/門風刻
+  var hasDasixi = autoPats.some(function(p) { return p.name === '大四喜'; });
+  ['qfk','mfk'].forEach(function(id) {
+    var cb = document.getElementById('cctx-' + id);
+    var row = document.getElementById('cw-' + id);
+    if (hasDasixi) {
+      if (cb) { cb.checked = false; cb.disabled = true; }
+      if (row) row.style.opacity = '0.4';
+    }
+  });
+
   var ctxTai = 0;
   CTX_DEFS.forEach(function(c) {
     var cb = document.getElementById('cctx-' + c.id);
-    if (cb && cb.checked) ctxTai += c.tai;
+    if (cb && cb.checked && !cb.disabled) ctxTai += c.tai;
   });
   var total = autoTai + ctxTai;
   var totalEl = document.getElementById('calc-total');
