@@ -162,6 +162,14 @@
   .section-hdr { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 4px; }
   .section-title { font-size: 13px; font-weight: 600; }
   .hint-text { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+
+  /* Calc */
+  .calc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); transition: opacity .15s; }
+  .calc-cb { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
+  .calc-name { flex: 1; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .calc-tai-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+  .calc-info-btn { border: none; background: var(--bg); border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; color: var(--text2); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .calc-info-btn:hover { background: var(--border); }
 </style>
 </head>
 <body>
@@ -187,6 +195,7 @@
   <button class="nav-btn" onclick="goTab('rank',this)">🏆 排行榜</button>
   <button class="nav-btn" onclick="goTab('rec',this)">☰ 所有紀錄</button>
   <button class="nav-btn" onclick="goTab('profile',this)">👤 選手資料</button>
+  <button class="nav-btn" onclick="goTab('calc',this)">🀄 台數計算</button>
   <button class="nav-btn" onclick="goTab('rules',this)">📖 台數對照表</button>
   <button class="nav-btn" onclick="goTab('mgr',this)">⚙ 參賽者管理</button>
 </nav>
@@ -328,6 +337,31 @@
     <div id="profile-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px"></div>
   </div>
 
+  <!-- 台數計算 -->
+  <div id="pg-calc" class="pg">
+    <div class="card" style="text-align:center;margin-bottom:16px;padding:24px 20px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">目前台數</div>
+      <div id="calc-total" style="font-size:60px;font-weight:800;color:var(--text2);line-height:1.1">0</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">台</div>
+    </div>
+    <div id="calc-groups"></div>
+    <div class="card" style="margin-top:4px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="card-title" style="margin-bottom:0">已選牌型</div>
+        <button class="btn btn-danger" style="font-size:11px;padding:5px 12px" onclick="clearCalc()">✕ 清除全部</button>
+      </div>
+      <div id="calc-selected"><span style="color:var(--text2);font-size:13px">尚未勾選任何牌型</span></div>
+    </div>
+    <div id="calc-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:400px;width:90%;position:relative">
+        <button onclick="closeCalcModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>
+        <div id="calc-modal-tai" style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:6px"></div>
+        <div id="calc-modal-name" style="font-size:20px;font-weight:700;margin-bottom:12px"></div>
+        <div id="calc-modal-desc" style="font-size:14px;line-height:1.8;color:var(--text)"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 台數對照表 -->
   <div id="pg-rules" class="pg">
 
@@ -446,6 +480,7 @@ function goTab(id, el) {
   if (id === 'rank') renderRank();
   if (id === 'rec') { buildRecFilter(); renderRec(); }
   if (id === 'mgr') renderMgr();
+  if (id === 'calc') renderCalc();
   if (id === 'rules') renderRules();
   if (id === 'profile') renderProfileGrid();
 }
@@ -1029,6 +1064,180 @@ var RULES = [
   ]}
 ];
 
+// ── 台數計算 ──
+var CALC_RULES = [
+  { tai: 1, color: '#e8a020', bg: '#fef9ee', items: [
+    { id: 'mq',   name: '門清',   desc: '胡牌時，沒有吃牌、碰牌、明積。' },
+    { id: 'zm',   name: '自摸',   desc: '胡牌的牌由自己摸進。' },
+    { id: 'qg',   name: '搶槓',   desc: '聽牌時，因別人加槓而加槓的那張牌，恰巧是可以胡的牌。' },
+    { id: 'dt',   name: '獨聽',   desc: '邊張、中洞、單吊。' },
+    { id: 'gskh', name: '槓上開花', desc: '因摸到花牌、暗槓或加槓而補牌，補牌後恰巧胡牌。' },
+    { id: 'hdly', name: '海底撈月', desc: '摸牌盡最後一張，而自摸者多計一台。因摸到花牌或加槓造成其結果為最後一張牌時，亦以海底撈月計之。' }
+  ]},
+  { tai: 2, color: '#2d8a4e', bg: '#edf7f1', items: [
+    { id: 'ph',  name: '平胡',  desc: '胡牌由五組順子及一個對子組成，胡他人牌非自摸。牌中無字、花牌、呈兩面聽牌狀態。釣將不算。' },
+    { id: 'qq',  name: '全求',  desc: '手牌只剩一張牌單吊胡牌，而其餘全吃或碰，且胡他人牌。' },
+    { id: 'sak', name: '三暗刻', desc: '手牌裡，有三組刻子（包括暗槓）。' }
+  ]},
+  { tai: 4, color: '#1a6aaa', bg: '#eaf3fc', items: [
+    { id: 'dit', name: '地聽',  desc: '在無人吃碰情況下，配牌後打出第一張牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
+    { id: 'pph', name: '碰碰胡', desc: '胡牌全部由刻子再加一個對子組成。' },
+    { id: 'xsy', name: '小三元', desc: '胡牌者中、發、白其中二組是刻子一組是對子。' },
+    { id: 'hys', name: '混一色', desc: '胡牌者只有一種數牌，及字牌混合所組成。' }
+  ]},
+  { tai: 5, color: '#7b3ab0', bg: '#f5eefb', items: [
+    { id: 'sak4', name: '四暗刻', desc: '胡牌時，手牌裡有四組刻子。' }
+  ]},
+  { tai: 8, color: '#c0392b', bg: '#fdf0ef', items: [
+    { id: 'tt',  name: '天聽',  desc: '配牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
+    { id: 'wak', name: '五暗刻', desc: '胡牌時，手牌裡有五組刻子。' },
+    { id: 'dsy', name: '大三元', desc: '胡牌時，有中、發、白三組刻子。' },
+    { id: 'xsh', name: '小四喜', desc: '胡牌者完成東、南、西、北其中三組刻子，一組對子。' },
+    { id: 'qys', name: '清一色', desc: '整副牌為同一花色所組成，由筒、條或萬所組成的牌。' }
+  ]},
+  { tai: 16, color: '#8b0000', bg: '#fdf0f0', items: [
+    { id: 'tgh', name: '天胡', desc: '莊家取完牌後，已經胡牌，稱為天胡。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
+    { id: 'rgh', name: '人胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，胡他人牌，算清16台，不得加計門清、天地聽。其餘另計。' },
+    { id: 'dgh', name: '地胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，開家於此巡內第一次摸牌即自摸胡，算清16台，不得加計自摸、門清、不求、天地聽。其餘另計。' },
+    { id: 'dsh', name: '大四喜', desc: '手牌(含已露牌)有風牌之4種刻(槓)子，不分明暗，算清16台，不得加計門風、圈風台。其餘另計。' }
+  ]}
+];
+
+var CALC_EXCL = {
+  'tgh':  ['zm', 'mq', 'tt', 'dit'],
+  'rgh':  ['mq', 'tt', 'dit'],
+  'dgh':  ['zm', 'mq', 'tt', 'dit'],
+  'ph':   ['zm'],
+  'tt':   ['mq', 'dit'],
+  'dit':  ['mq', 'tt']
+};
+
+var calcRendered = false;
+
+function renderCalc() {
+  if (!calcRendered) {
+    calcRendered = true;
+    var html = '';
+    CALC_RULES.forEach(function(group) {
+      var items = group.items.map(function(item) {
+        return '<div class="calc-item" id="cl-' + item.id + '">' +
+          '<input type="checkbox" id="cc-' + item.id + '" class="calc-cb" style="accent-color:' + group.color + '" onchange="calcChange(\'' + item.id + '\')">' +
+          '<label for="cc-' + item.id + '" class="calc-name">' + item.name + '</label>' +
+          '<span class="calc-tai-badge" style="background:' + group.bg + ';color:' + group.color + '">' + group.tai + '台</span>' +
+          '<button class="calc-info-btn" onclick="event.stopPropagation();showCalcInfo(\'' + item.id + '\')">？</button>' +
+          '</div>';
+      }).join('');
+      html += '<div style="margin-bottom:16px">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+        '<span style="background:' + group.color + ';color:#fff;font-size:13px;font-weight:700;padding:3px 14px;border-radius:999px">' + group.tai + ' 台</span>' +
+        '<div style="flex:1;height:1px;background:' + group.color + '44"></div></div>' +
+        '<div style="display:grid;gap:6px">' + items + '</div></div>';
+    });
+    document.getElementById('calc-groups').innerHTML = html;
+  }
+  updateCalcDisplay();
+}
+
+function calcChange(id) {
+  var cb = document.getElementById('cc-' + id);
+  if (cb.checked) {
+    (CALC_EXCL[id] || []).forEach(function(eid) {
+      var ecb = document.getElementById('cc-' + eid);
+      var elbl = document.getElementById('cl-' + eid);
+      if (ecb) { ecb.checked = false; ecb.disabled = true; }
+      if (elbl) elbl.style.opacity = '0.4';
+    });
+  } else {
+    recomputeCalcLocks();
+  }
+  updateCalcDisplay();
+}
+
+function recomputeCalcLocks() {
+  CALC_RULES.forEach(function(g) {
+    g.items.forEach(function(item) {
+      var cb = document.getElementById('cc-' + item.id);
+      var lbl = document.getElementById('cl-' + item.id);
+      if (cb) cb.disabled = false;
+      if (lbl) lbl.style.opacity = '1';
+    });
+  });
+  CALC_RULES.forEach(function(g) {
+    g.items.forEach(function(item) {
+      var cb = document.getElementById('cc-' + item.id);
+      if (cb && cb.checked) {
+        (CALC_EXCL[item.id] || []).forEach(function(eid) {
+          var ecb = document.getElementById('cc-' + eid);
+          var elbl = document.getElementById('cl-' + eid);
+          if (ecb) ecb.disabled = true;
+          if (elbl) elbl.style.opacity = '0.4';
+        });
+      }
+    });
+  });
+}
+
+function updateCalcDisplay() {
+  var total = 0, selected = [];
+  CALC_RULES.forEach(function(g) {
+    g.items.forEach(function(item) {
+      var cb = document.getElementById('cc-' + item.id);
+      if (cb && cb.checked) {
+        total += g.tai;
+        selected.push({ name: item.name, tai: g.tai, color: g.color, bg: g.bg });
+      }
+    });
+  });
+  var totalEl = document.getElementById('calc-total');
+  if (!totalEl) return;
+  totalEl.textContent = total;
+  totalEl.style.color = total === 0 ? 'var(--text2)' :
+    total <= 2 ? 'var(--text2)' :
+    total <= 5 ? '#1a6aaa' :
+    total <= 8 ? 'var(--amber)' : 'var(--red)';
+  var selEl = document.getElementById('calc-selected');
+  if (!selEl) return;
+  if (!selected.length) {
+    selEl.innerHTML = '<span style="color:var(--text2);font-size:13px">尚未勾選任何牌型</span>';
+  } else {
+    selEl.innerHTML = selected.map(function(s) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;margin:3px;padding:4px 10px;border-radius:999px;background:' + s.bg + ';color:' + s.color + ';font-size:12px;font-weight:600">' +
+        s.name + '<span style="font-size:11px;opacity:.75">+' + s.tai + '</span></span>';
+    }).join('');
+  }
+}
+
+function clearCalc() {
+  CALC_RULES.forEach(function(g) {
+    g.items.forEach(function(item) {
+      var cb = document.getElementById('cc-' + item.id);
+      var lbl = document.getElementById('cl-' + item.id);
+      if (cb) { cb.checked = false; cb.disabled = false; }
+      if (lbl) lbl.style.opacity = '1';
+    });
+  });
+  updateCalcDisplay();
+}
+
+function showCalcInfo(id) {
+  var found = null, grp = null;
+  CALC_RULES.forEach(function(g) {
+    g.items.forEach(function(item) {
+      if (item.id === id) { found = item; grp = g; }
+    });
+  });
+  if (!found) return;
+  document.getElementById('calc-modal-tai').textContent = grp.tai + ' 台';
+  document.getElementById('calc-modal-tai').style.color = grp.color;
+  document.getElementById('calc-modal-name').textContent = found.name;
+  document.getElementById('calc-modal-desc').textContent = found.desc;
+  document.getElementById('calc-modal').style.display = 'flex';
+}
+
+function closeCalcModal() {
+  document.getElementById('calc-modal').style.display = 'none';
+}
+
 var currentModal = null;
 
 function renderRules() {
@@ -1068,6 +1277,10 @@ function closeModal() {
 
 document.getElementById('rule-modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
+});
+
+document.getElementById('calc-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeCalcModal();
 });
 
 document.getElementById('e-date').value = new Date().toISOString().split('T')[0];
