@@ -206,7 +206,7 @@
         <div class="section-title">輸贏與參賽費</div>
         <button class="btn btn-danger" style="font-size:11px;padding:5px 12px" onclick="clearInputs()">✕ 清除所有輸入值</button>
       </div>
-      <div class="hint-text">輸贏：正數=贏，負數=輸 ｜ 參賽費：本場繳交金額（空白=0）</div>
+      <div class="hint-text">贏：填入贏的金額 ｜ 輸：填入輸的金額（均填正數）｜ 參賽費：本場繳交金額（空白=0）</div>
       <div class="pgrid" id="e-grid"><div class="loading"><div class="spinner"></div>載入中...</div></div>
       <div class="sum-bar">
         <div>
@@ -463,9 +463,16 @@ function buildEntry() {
   var g = document.getElementById('e-grid');
   g.innerHTML = P.map(function(p) {
     var id = eid(p);
+    var prof = PROFILES[p] || {};
+    var avatar = prof.avatar
+      ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+      : '👤';
     return '<div class="pbox">' +
-      '<div class="pn">' + p + '</div>' +
-      '<div class="irow"><span class="lbl">輸贏</span><input type="number" step="any" id="sc-' + id + '" oninput="updateAll()"></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+      '<div style="width:36px;height:36px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + avatar + '</div>' +
+      '<div class="pn" style="margin-bottom:0">' + p + '</div></div>' +
+      '<div class="irow"><span class="lbl">贏</span><input type="number" step="any" min="0" id="win-' + id + '" oninput="updateAll()" placeholder="0"></div>' +
+      '<div class="irow"><span class="lbl">輸</span><input type="number" step="any" min="0" id="lose-' + id + '" oninput="updateAll()" placeholder="0"></div>' +
       '<div class="irow"><span class="lbl">參賽費</span><input type="number" step="any" min="0" id="fe-' + id + '" oninput="updateAll()"></div>' +
       '<div class="netl">淨值：<b id="nt-' + id + '" style="color:var(--text2)">-</b></div></div>';
   }).join('');
@@ -476,7 +483,9 @@ function updateAll() {
   var sum = 0, hasAny = false;
   P.forEach(function(p) {
     var id = eid(p);
-    var sc = readNum(document.getElementById('sc-' + id));
+    var win = readNum(document.getElementById('win-' + id));
+    var lose = readNum(document.getElementById('lose-' + id));
+    var sc = (win !== null || lose !== null) ? ((win || 0) - (lose || 0)) : null;
     var fe = readNum(document.getElementById('fe-' + id));
     var ntEl = document.getElementById('nt-' + id);
     if (!ntEl) return;
@@ -508,10 +517,11 @@ function updateAll() {
 function clearInputs() {
   P.forEach(function(p) {
     var id = eid(p);
-    var sc = document.getElementById('sc-' + id);
+    var win = document.getElementById('win-' + id);
+    var lose = document.getElementById('lose-' + id);
     var fe = document.getElementById('fe-' + id);
     var nt = document.getElementById('nt-' + id);
-    if (sc) sc.value = ''; if (fe) fe.value = '';
+    if (win) win.value = ''; if (lose) lose.value = ''; if (fe) fe.value = '';
     if (nt) { nt.textContent = '-'; nt.style.color = 'var(--text2)'; }
   });
   document.getElementById('sum-val').textContent = '0';
@@ -529,9 +539,13 @@ async function doSave() {
   var sc = {}, fe = {}, cnt = 0, sum = 0;
   P.forEach(function(p) {
     var id = eid(p);
-    var sv = readNum(document.getElementById('sc-' + id));
+    var win = readNum(document.getElementById('win-' + id));
+    var lose = readNum(document.getElementById('lose-' + id));
     var fv = readNum(document.getElementById('fe-' + id));
-    if (sv !== null) { sc[p] = sv; fe[p] = fv !== null ? fv : 0; cnt++; sum += sv; }
+    if (win !== null || lose !== null) {
+      var sv = (win || 0) - (lose || 0);
+      sc[p] = sv; fe[p] = fv !== null ? fv : 0; cnt++; sum += sv;
+    }
   });
   if (cnt < 2) { alert('請至少輸入2位參賽者的輸贏值'); return; }
   var r = f2(sum);
@@ -585,7 +599,7 @@ function renderRank() {
         '<td style="font-weight:600">' + p + '</td>' +
         '<td>' + s.g + '</td>' +
         '<td><span class="' + (s.sc > 0 ? 'plus' : s.sc < 0 ? 'minus' : '') + '">' + fs(s.sc) + '</span></td>' +
-        '<td style="color:var(--red)">－' + f2(s.fe) + '</td>' +
+        '<td style="color:var(--red)">' + f2(s.fe) + '</td>' +
         '<td><span class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '" style="font-size:14px">' + fs(net) + '</span></td>' +
         '<td><span class="bw">' + (s.best >= 0 ? '+' : '') + s.best + '</span></td>' +
         '<td><span class="bl">' + s.worst + '</span></td>' +
@@ -612,7 +626,7 @@ function renderRank() {
         '<td>' + pos + '</td>' +
         '<td style="font-weight:600">' + s.p + '</td>' +
         '<td>' + s.g + ' 場</td>' +
-        '<td style="color:var(--red)">－' + f2(s.fe) + '</td>' +
+        '<td style="color:var(--red)">' + f2(s.fe) + '</td>' +
         '<td><span class="bw">' + s.zimoTotal + ' 次</span></td>' +
         '<td><span style="font-size:15px;font-weight:700;color:var(--amber)">' + s.zimoAvg + ' 次/場</span></td></tr>';
     }).join('');
@@ -670,7 +684,7 @@ function renderSum(list) {
         '<span style="font-size:20px;font-weight:700" class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '">' + fs(net) + '</span></div>' +
         '<div class="sg">' +
         '<div class="si"><div class="sl">輸贏合計</div><div class="sv2 ' + (s.sc > 0 ? 'plus' : s.sc < 0 ? 'minus' : '') + '">' + fs(s.sc) + '</div></div>' +
-        '<div class="si"><div class="sl">總參賽費</div><div class="sv2" style="color:var(--red)">－' + f2(s.fe) + '</div></div>' +
+        '<div class="si"><div class="sl">總參賽費</div><div class="sv2" style="color:var(--red)">' + f2(s.fe) + '</div></div>' +
         '<div class="si"><div class="sl">出賽場次</div><div class="sv2">' + s.g + ' 場</div></div>' +
         '<div class="si"><div class="sl">勝場率</div><div class="sv2">' + s.w + '勝(' + wr + '%)</div></div>' +
         '<div class="si"><div class="sl">最佳單場</div><div class="sv2 plus">' + (s.best >= 0 ? '+' : '') + s.best + '</div></div>' +
@@ -690,7 +704,7 @@ function renderDet(list) {
       var v = r.sc[p], fv = fe[p] || 0, nt = f2(v - fv);
       return '<div class="det-p"><div class="det-pname">' + p + '</div>' +
         '<div class="det-row"><span>輸贏</span><span class="' + (v > 0 ? 'plus' : v < 0 ? 'minus' : '') + '">' + fs(v) + '</span></div>' +
-        '<div class="det-row"><span>參賽費</span><span style="color:var(--red)">－' + fv + '</span></div>' +
+        '<div class="det-row"><span>參賽費</span><span style="color:var(--red)">' + fv + '</span></div>' +
         '<div class="det-net"><span>淨值</span><b class="' + (nt > 0 ? 'plus' : nt < 0 ? 'minus' : '') + '">' + fs(nt) + '</b></div></div>';
     }).join('');
     return '<div class="det-card"><div class="det-top">' +
@@ -897,7 +911,7 @@ function openProfile(name) {
     { l: '出賽場次', v: st.g + ' 場', c: '' },
     { l: '輸贏合計', v: fs(st.sc), c: st.sc > 0 ? 'var(--green)' : st.sc < 0 ? 'var(--red)' : '' },
     { l: '實際淨值', v: fs(net), c: net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '' },
-    { l: '總參賽費', v: '-' + f2(st.fe), c: 'var(--red)' },
+    { l: '總參賽費', v: f2(st.fe), c: 'var(--red)' },
     { l: '勝場率', v: st.w + '勝(' + wr + '%)', c: wr >= 50 ? 'var(--green)' : '' },
     { l: '最佳單場', v: st.best !== null ? (st.best >= 0 ? '+' : '') + st.best : '-', c: 'var(--green)' }
   ].map(function(x) {
@@ -974,6 +988,7 @@ async function saveProfile() {
   await saveAll();
   tip('✓ 個人資料已儲存');
   renderProfileGrid();
+  buildEntry();
 }
 
 var RULES = [
