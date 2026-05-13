@@ -339,19 +339,36 @@
 
   <!-- 台數計算 -->
   <div id="pg-calc" class="pg">
+    <!-- 台數 + 自動偵測結果 -->
     <div class="card" style="text-align:center;margin-bottom:16px;padding:24px 20px">
       <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">目前台數</div>
       <div id="calc-total" style="font-size:60px;font-weight:800;color:var(--text2);line-height:1.1">0</div>
       <div style="font-size:13px;color:var(--text2);margin-top:4px">台</div>
+      <div id="calc-auto-list" style="margin-top:12px;display:flex;flex-wrap:wrap;justify-content:center;gap:5px;min-height:24px"></div>
     </div>
-    <div id="calc-groups"></div>
-    <div class="card" style="margin-top:4px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div class="card-title" style="margin-bottom:0">已選牌型</div>
-        <button class="btn btn-danger" style="font-size:11px;padding:5px 12px" onclick="clearCalc()">✕ 清除全部</button>
+
+    <!-- 牌面輸入 -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">輸入牌面</div>
+        <div style="font-size:13px;font-weight:700"><span id="calc-cnt" style="color:var(--text)">0</span><span style="color:var(--text2)"> / 17 張</span></div>
       </div>
-      <div id="calc-selected"><span style="color:var(--text2);font-size:13px">尚未勾選任何牌型</span></div>
+      <div id="calc-picker"></div>
+      <div id="calc-hand" style="margin-top:10px;min-height:44px;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <span style="color:var(--text2);font-size:12px;align-self:center">點擊上方牌面加入手牌（最多17張），點擊手牌可移除</span>
+      </div>
     </div>
+
+    <!-- 情境條件 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">情境條件</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">🔍 清一色、混一色、碰碰胡、大小三元、大小四喜 輸入17張後自動偵測；以下情境須手動選擇</div>
+      <div id="calc-ctx" style="display:grid;gap:6px"></div>
+    </div>
+
+    <button class="btn btn-danger" style="width:100%;margin-bottom:16px" onclick="clearCalcAll()">✕ 清除全部</button>
+
+    <!-- 說明 Modal -->
     <div id="calc-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center">
       <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:400px;width:90%;position:relative">
         <button onclick="closeCalcModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>
@@ -1065,51 +1082,61 @@ var RULES = [
 ];
 
 // ── 台數計算 ──
-var CALC_RULES = [
-  { tai: 1, color: '#e8a020', bg: '#fef9ee', items: [
-    { id: 'mq',   name: '門清',   desc: '胡牌時，沒有吃牌、碰牌、明積。' },
-    { id: 'zm',   name: '自摸',   desc: '胡牌的牌由自己摸進。' },
-    { id: 'qg',   name: '搶槓',   desc: '聽牌時，因別人加槓而加槓的那張牌，恰巧是可以胡的牌。' },
-    { id: 'dt',   name: '獨聽',   desc: '邊張、中洞、單吊。' },
-    { id: 'gskh', name: '槓上開花', desc: '因摸到花牌、暗槓或加槓而補牌，補牌後恰巧胡牌。' },
-    { id: 'hdly', name: '海底撈月', desc: '摸牌盡最後一張，而自摸者多計一台。因摸到花牌或加槓造成其結果為最後一張牌時，亦以海底撈月計之。' }
-  ]},
-  { tai: 2, color: '#2d8a4e', bg: '#edf7f1', items: [
-    { id: 'ph',  name: '平胡',  desc: '胡牌由五組順子及一個對子組成，胡他人牌非自摸。牌中無字、花牌、呈兩面聽牌狀態。釣將不算。' },
-    { id: 'qq',  name: '全求',  desc: '手牌只剩一張牌單吊胡牌，而其餘全吃或碰，且胡他人牌。' },
-    { id: 'sak', name: '三暗刻', desc: '手牌裡，有三組刻子（包括暗槓）。' }
-  ]},
-  { tai: 4, color: '#1a6aaa', bg: '#eaf3fc', items: [
-    { id: 'dit', name: '地聽',  desc: '在無人吃碰情況下，配牌後打出第一張牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
-    { id: 'pph', name: '碰碰胡', desc: '胡牌全部由刻子再加一個對子組成。' },
-    { id: 'xsy', name: '小三元', desc: '胡牌者中、發、白其中二組是刻子一組是對子。' },
-    { id: 'hys', name: '混一色', desc: '胡牌者只有一種數牌，及字牌混合所組成。' }
-  ]},
-  { tai: 5, color: '#7b3ab0', bg: '#f5eefb', items: [
-    { id: 'sak4', name: '四暗刻', desc: '胡牌時，手牌裡有四組刻子。' }
-  ]},
-  { tai: 8, color: '#c0392b', bg: '#fdf0ef', items: [
-    { id: 'tt',  name: '天聽',  desc: '配牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
-    { id: 'wak', name: '五暗刻', desc: '胡牌時，手牌裡有五組刻子。' },
-    { id: 'dsy', name: '大三元', desc: '胡牌時，有中、發、白三組刻子。' },
-    { id: 'xsh', name: '小四喜', desc: '胡牌者完成東、南、西、北其中三組刻子，一組對子。' },
-    { id: 'qys', name: '清一色', desc: '整副牌為同一花色所組成，由筒、條或萬所組成的牌。' }
-  ]},
-  { tai: 16, color: '#8b0000', bg: '#fdf0f0', items: [
-    { id: 'tgh', name: '天胡', desc: '莊家取完牌後，已經胡牌，稱為天胡。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
-    { id: 'rgh', name: '人胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，胡他人牌，算清16台，不得加計門清、天地聽。其餘另計。' },
-    { id: 'dgh', name: '地胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，開家於此巡內第一次摸牌即自摸胡，算清16台，不得加計自摸、門清、不求、天地聽。其餘另計。' },
-    { id: 'dsh', name: '大四喜', desc: '手牌(含已露牌)有風牌之4種刻(槓)子，不分明暗，算清16台，不得加計門風、圈風台。其餘另計。' }
-  ]}
+var calcHand = [];
+var HAND_MAX = 17;
+
+var CALC_SUITS = [
+  { name:'萬', color:'#c0392b', tiles:[11,12,13,14,15,16,17,18,19] },
+  { name:'條', color:'#2d6a2d', tiles:[21,22,23,24,25,26,27,28,29] },
+  { name:'筒', color:'#1a6aaa', tiles:[31,32,33,34,35,36,37,38,39] },
+  { name:'字', color:'#7b3ab0', tiles:[41,42,43,44,45,46,47] }
 ];
 
-var CALC_EXCL = {
-  'tgh':  ['zm', 'mq', 'tt', 'dit'],
-  'rgh':  ['mq', 'tt', 'dit'],
-  'dgh':  ['zm', 'mq', 'tt', 'dit'],
+var TILE_LABEL = {
+  11:'1萬',12:'2萬',13:'3萬',14:'4萬',15:'5萬',16:'6萬',17:'7萬',18:'8萬',19:'9萬',
+  21:'1條',22:'2條',23:'3條',24:'4條',25:'5條',26:'6條',27:'7條',28:'8條',29:'9條',
+  31:'1筒',32:'2筒',33:'3筒',34:'4筒',35:'5筒',36:'6筒',37:'7筒',38:'8筒',39:'9筒',
+  41:'東',42:'南',43:'西',44:'北',45:'中',46:'發',47:'白'
+};
+
+function tileCol(t) {
+  if (t === 45) return '#c0392b';
+  if (t === 46) return '#2d6a2d';
+  if (t === 47) return '#6b6960';
+  if (t >= 41)  return '#1a1a18';
+  var m = { 1:'#c0392b', 2:'#2d6a2d', 3:'#1a6aaa' };
+  return m[Math.floor(t/10)];
+}
+
+var CTX_DEFS = [
+  { id:'zm',   name:'自摸',    tai:1,  color:'#2d8a4e', desc:'胡牌的牌由自己摸進。' },
+  { id:'mq',   name:'門清',    tai:1,  color:'#2d8a4e', desc:'胡牌時，沒有吃牌、碰牌、明積。' },
+  { id:'dt',   name:'獨聽',    tai:1,  color:'#2d8a4e', desc:'邊張、中洞、單吊。' },
+  { id:'qg',   name:'搶槓',    tai:1,  color:'#2d8a4e', desc:'聽牌時，因別人加槓，那張牌恰好可以胡。' },
+  { id:'gskh', name:'槓上開花', tai:1, color:'#2d8a4e', desc:'因摸花牌、暗槓或加槓補牌後恰巧胡牌。' },
+  { id:'hdly', name:'海底撈月', tai:1, color:'#2d8a4e', desc:'摸牌盡最後一張而自摸。' },
+  { id:'ph',   name:'平胡',    tai:2,  color:'#1a6aaa', desc:'五組順子加一個對子，胡他人牌非自摸，無字花牌，兩面聽牌。釣將不算。' },
+  { id:'qq',   name:'全求',    tai:2,  color:'#1a6aaa', desc:'手牌只剩一張單吊胡他人牌，其餘全吃或碰。' },
+  { id:'sak',  name:'三暗刻',  tai:2,  color:'#1a6aaa', desc:'手牌裡有三組暗刻子（包括暗槓）。' },
+  { id:'sak4', name:'四暗刻',  tai:5,  color:'#7b3ab0', desc:'手牌裡有四組暗刻子。' },
+  { id:'wak',  name:'五暗刻',  tai:8,  color:'#c0392b', desc:'手牌裡有五組暗刻子。' },
+  { id:'dit',  name:'地聽',    tai:4,  color:'#7b3ab0', desc:'無人吃碰情況下，打出第一張牌即聽牌，門清不求不能算，可加計自摸。' },
+  { id:'tt',   name:'天聽',    tai:8,  color:'#c0392b', desc:'配牌即聽牌，門清不求不能算，可加計自摸。' },
+  { id:'tgh',  name:'天胡',    tai:16, color:'#8b0000', desc:'莊家取完牌後已胡牌。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
+  { id:'rgh',  name:'人胡',    tai:16, color:'#8b0000', desc:'第一巡內無吃碰明積胡他人牌，算清16台。不得加計門清、天地聽。其餘另計。' },
+  { id:'dgh',  name:'地胡',    tai:16, color:'#8b0000', desc:'第一巡內無吃碰明積，第一次摸牌即自摸胡，算清16台。不得加計自摸、門清、不求、天地聽。其餘另計。' }
+];
+
+var CTX_EXCL = {
+  'tgh':  ['zm','mq','tt','dit'],
+  'rgh':  ['mq','tt','dit'],
+  'dgh':  ['zm','mq','tt','dit'],
   'ph':   ['zm'],
-  'tt':   ['mq', 'dit'],
-  'dit':  ['mq', 'tt']
+  'tt':   ['mq','dit'],
+  'dit':  ['mq','tt'],
+  'sak':  ['sak4','wak'],
+  'sak4': ['sak','wak'],
+  'wak':  ['sak','sak4']
 };
 
 var calcRendered = false;
@@ -1117,77 +1144,162 @@ var calcRendered = false;
 function renderCalc() {
   if (!calcRendered) {
     calcRendered = true;
-    var html = '';
-    CALC_RULES.forEach(function(group) {
-      var items = group.items.map(function(item) {
-        return '<div class="calc-item" id="cl-' + item.id + '">' +
-          '<input type="checkbox" id="cc-' + item.id + '" class="calc-cb" style="accent-color:' + group.color + '" onchange="calcChange(\'' + item.id + '\')">' +
-          '<label for="cc-' + item.id + '" class="calc-name">' + item.name + '</label>' +
-          '<span class="calc-tai-badge" style="background:' + group.bg + ';color:' + group.color + '">' + group.tai + '台</span>' +
-          '<button class="calc-info-btn" onclick="event.stopPropagation();showCalcInfo(\'' + item.id + '\')">？</button>' +
-          '</div>';
-      }).join('');
-      html += '<div style="margin-bottom:16px">' +
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
-        '<span style="background:' + group.color + ';color:#fff;font-size:13px;font-weight:700;padding:3px 14px;border-radius:999px">' + group.tai + ' 台</span>' +
-        '<div style="flex:1;height:1px;background:' + group.color + '44"></div></div>' +
-        '<div style="display:grid;gap:6px">' + items + '</div></div>';
-    });
-    document.getElementById('calc-groups').innerHTML = html;
+    document.getElementById('calc-picker').innerHTML = CALC_SUITS.map(function(s) {
+      return '<div style="margin-bottom:8px">' +
+        '<div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">' + s.name + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:3px">' +
+        s.tiles.map(function(t) {
+          return '<button onclick="addCalcTile(' + t + ')" style="min-width:36px;padding:6px 4px;border-radius:6px;border:1.5px solid ' + s.color + '33;background:var(--surface);cursor:pointer;font-size:12px;font-weight:700;color:' + s.color + '" onmouseover="this.style.background=\'' + s.color + '15\'" onmouseout="this.style.background=\'var(--surface)\'">' + TILE_LABEL[t] + '</button>';
+        }).join('') + '</div></div>';
+    }).join('');
+    document.getElementById('calc-ctx').innerHTML = CTX_DEFS.map(function(c) {
+      return '<div class="calc-item" id="cw-' + c.id + '">' +
+        '<input type="checkbox" id="cctx-' + c.id + '" class="calc-cb" style="accent-color:' + c.color + '" onchange="ctxChange(\'' + c.id + '\')">' +
+        '<label for="cctx-' + c.id + '" class="calc-name">' + c.name + '</label>' +
+        '<span class="calc-tai-badge" style="background:' + c.color + '18;color:' + c.color + '">+' + c.tai + '台</span>' +
+        '<button class="calc-info-btn" onclick="event.stopPropagation();showCalcInfo(\'' + c.id + '\')">？</button>' +
+        '</div>';
+    }).join('');
   }
-  updateCalcDisplay();
+  calcAnalyze();
 }
 
-function calcChange(id) {
-  var cb = document.getElementById('cc-' + id);
+function addCalcTile(t) {
+  if (calcHand.length >= HAND_MAX) { tip('最多 ' + HAND_MAX + ' 張'); return; }
+  calcHand.push(t);
+  refreshCalcHand();
+  calcAnalyze();
+}
+
+function removeCalcTile(i) {
+  calcHand.splice(i, 1);
+  refreshCalcHand();
+  calcAnalyze();
+}
+
+function refreshCalcHand() {
+  var cntEl = document.getElementById('calc-cnt');
+  cntEl.textContent = calcHand.length;
+  cntEl.style.color = calcHand.length === HAND_MAX ? 'var(--green)' : 'var(--text)';
+  var area = document.getElementById('calc-hand');
+  if (!calcHand.length) {
+    area.innerHTML = '<span style="color:var(--text2);font-size:12px;align-self:center">點擊上方牌面加入手牌（最多17張），點擊手牌可移除</span>';
+    return;
+  }
+  var indexed = calcHand.map(function(t, i) { return { t: t, i: i }; })
+    .sort(function(a, b) { return a.t - b.t; });
+  area.innerHTML = indexed.map(function(x) {
+    var col = tileCol(x.t);
+    return '<span onclick="removeCalcTile(' + x.i + ')" title="點擊移除" style="display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 5px;border-radius:6px;background:var(--surface);border:1.5px solid ' + col + '55;font-size:12px;font-weight:700;color:' + col + ';cursor:pointer" onmouseover="this.style.borderColor=\'' + col + '\'" onmouseout="this.style.borderColor=\'' + col + '55\'">' + TILE_LABEL[x.t] + '</span>';
+  }).join('');
+}
+
+function tileCounts() {
+  var c = {};
+  calcHand.forEach(function(t) { c[t] = (c[t] || 0) + 1; });
+  return c;
+}
+
+function detectPatterns() {
+  if (calcHand.length !== HAND_MAX) return [];
+  var c = tileCounts();
+  var found = [];
+
+  // 清一色 / 混一色
+  var numSuits = {}, hasHonor = false;
+  calcHand.forEach(function(t) {
+    if (t >= 41) hasHonor = true;
+    else numSuits[Math.floor(t / 10)] = 1;
+  });
+  var suitCount = Object.keys(numSuits).length;
+  if (!hasHonor && suitCount === 1) {
+    found.push({ name:'清一色', tai:8, color:'#c0392b' });
+  } else if (suitCount === 1 && hasHonor) {
+    found.push({ name:'混一色', tai:4, color:'#7b3ab0' });
+  }
+
+  // 大四喜 / 小四喜
+  var wc = [c[41]||0, c[42]||0, c[43]||0, c[44]||0];
+  var wTrip = wc.filter(function(v) { return v >= 3; }).length;
+  var wPair = wc.filter(function(v) { return v === 2; }).length;
+  if (wTrip === 4) {
+    found.push({ name:'大四喜', tai:16, color:'#8b0000' });
+  } else if (wTrip === 3 && wPair === 1) {
+    found.push({ name:'小四喜', tai:8, color:'#c0392b' });
+  }
+
+  // 大三元 / 小三元
+  var dc = [c[45]||0, c[46]||0, c[47]||0];
+  var dTrip = dc.filter(function(v) { return v >= 3; }).length;
+  var dPair = dc.filter(function(v) { return v === 2; }).length;
+  if (dTrip === 3) {
+    found.push({ name:'大三元', tai:8, color:'#c0392b' });
+  } else if (dTrip === 2 && dPair === 1) {
+    found.push({ name:'小三元', tai:4, color:'#7b3ab0' });
+  }
+
+  // 碰碰胡：移除一個對子後，所有牌數均可被3整除
+  var keys = Object.keys(c).map(Number);
+  var isPP = false;
+  for (var i = 0; i < keys.length; i++) {
+    var pt = keys[i];
+    if ((c[pt] || 0) < 2) continue;
+    var ok = true;
+    for (var j = 0; j < keys.length; j++) {
+      var qt = keys[j];
+      if (((c[qt] || 0) - (qt === pt ? 2 : 0)) % 3 !== 0) { ok = false; break; }
+    }
+    if (ok) { isPP = true; break; }
+  }
+  if (isPP) found.push({ name:'碰碰胡', tai:4, color:'#1a6aaa' });
+
+  return found;
+}
+
+function ctxChange(id) {
+  var cb = document.getElementById('cctx-' + id);
   if (cb.checked) {
-    (CALC_EXCL[id] || []).forEach(function(eid) {
-      var ecb = document.getElementById('cc-' + eid);
-      var elbl = document.getElementById('cl-' + eid);
+    (CTX_EXCL[id] || []).forEach(function(eid) {
+      var ecb = document.getElementById('cctx-' + eid);
+      var row = document.getElementById('cw-' + eid);
       if (ecb) { ecb.checked = false; ecb.disabled = true; }
-      if (elbl) elbl.style.opacity = '0.4';
+      if (row) row.style.opacity = '0.4';
     });
   } else {
-    recomputeCalcLocks();
+    recomputeCtxLocks();
   }
-  updateCalcDisplay();
+  calcAnalyze();
 }
 
-function recomputeCalcLocks() {
-  CALC_RULES.forEach(function(g) {
-    g.items.forEach(function(item) {
-      var cb = document.getElementById('cc-' + item.id);
-      var lbl = document.getElementById('cl-' + item.id);
-      if (cb) cb.disabled = false;
-      if (lbl) lbl.style.opacity = '1';
-    });
+function recomputeCtxLocks() {
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    var row = document.getElementById('cw-' + c.id);
+    if (cb) cb.disabled = false;
+    if (row) row.style.opacity = '1';
   });
-  CALC_RULES.forEach(function(g) {
-    g.items.forEach(function(item) {
-      var cb = document.getElementById('cc-' + item.id);
-      if (cb && cb.checked) {
-        (CALC_EXCL[item.id] || []).forEach(function(eid) {
-          var ecb = document.getElementById('cc-' + eid);
-          var elbl = document.getElementById('cl-' + eid);
-          if (ecb) ecb.disabled = true;
-          if (elbl) elbl.style.opacity = '0.4';
-        });
-      }
-    });
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    if (cb && cb.checked) {
+      (CTX_EXCL[c.id] || []).forEach(function(eid) {
+        var ecb = document.getElementById('cctx-' + eid);
+        var row = document.getElementById('cw-' + eid);
+        if (ecb) ecb.disabled = true;
+        if (row) row.style.opacity = '0.4';
+      });
+    }
   });
 }
 
-function updateCalcDisplay() {
-  var total = 0, selected = [];
-  CALC_RULES.forEach(function(g) {
-    g.items.forEach(function(item) {
-      var cb = document.getElementById('cc-' + item.id);
-      if (cb && cb.checked) {
-        total += g.tai;
-        selected.push({ name: item.name, tai: g.tai, color: g.color, bg: g.bg });
-      }
-    });
+function calcAnalyze() {
+  var autoPats = detectPatterns();
+  var autoTai = autoPats.reduce(function(s, p) { return s + p.tai; }, 0);
+  var ctxTai = 0;
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    if (cb && cb.checked) ctxTai += c.tai;
   });
+  var total = autoTai + ctxTai;
   var totalEl = document.getElementById('calc-total');
   if (!totalEl) return;
   totalEl.textContent = total;
@@ -1195,40 +1307,37 @@ function updateCalcDisplay() {
     total <= 2 ? 'var(--text2)' :
     total <= 5 ? '#1a6aaa' :
     total <= 8 ? 'var(--amber)' : 'var(--red)';
-  var selEl = document.getElementById('calc-selected');
-  if (!selEl) return;
-  if (!selected.length) {
-    selEl.innerHTML = '<span style="color:var(--text2);font-size:13px">尚未勾選任何牌型</span>';
+  var listEl = document.getElementById('calc-auto-list');
+  if (!listEl) return;
+  if (!autoPats.length && calcHand.length === HAND_MAX) {
+    listEl.innerHTML = '<span style="font-size:12px;color:var(--text2)">未偵測到特殊牌型</span>';
   } else {
-    selEl.innerHTML = selected.map(function(s) {
-      return '<span style="display:inline-flex;align-items:center;gap:4px;margin:3px;padding:4px 10px;border-radius:999px;background:' + s.bg + ';color:' + s.color + ';font-size:12px;font-weight:600">' +
-        s.name + '<span style="font-size:11px;opacity:.75">+' + s.tai + '</span></span>';
+    listEl.innerHTML = autoPats.map(function(p) {
+      return '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:999px;background:' + p.color + '15;color:' + p.color + ';font-size:12px;font-weight:600">✦ ' + p.name + ' <span style="opacity:.75">+' + p.tai + '</span></span>';
     }).join('');
   }
 }
 
-function clearCalc() {
-  CALC_RULES.forEach(function(g) {
-    g.items.forEach(function(item) {
-      var cb = document.getElementById('cc-' + item.id);
-      var lbl = document.getElementById('cl-' + item.id);
-      if (cb) { cb.checked = false; cb.disabled = false; }
-      if (lbl) lbl.style.opacity = '1';
-    });
+function clearCalcAll() {
+  calcHand = [];
+  refreshCalcHand();
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    var row = document.getElementById('cw-' + c.id);
+    if (cb) { cb.checked = false; cb.disabled = false; }
+    if (row) row.style.opacity = '1';
   });
-  updateCalcDisplay();
+  calcAnalyze();
 }
 
 function showCalcInfo(id) {
-  var found = null, grp = null;
-  CALC_RULES.forEach(function(g) {
-    g.items.forEach(function(item) {
-      if (item.id === id) { found = item; grp = g; }
-    });
-  });
+  var found = null;
+  for (var i = 0; i < CTX_DEFS.length; i++) {
+    if (CTX_DEFS[i].id === id) { found = CTX_DEFS[i]; break; }
+  }
   if (!found) return;
-  document.getElementById('calc-modal-tai').textContent = grp.tai + ' 台';
-  document.getElementById('calc-modal-tai').style.color = grp.color;
+  document.getElementById('calc-modal-tai').textContent = '+' + found.tai + ' 台';
+  document.getElementById('calc-modal-tai').style.color = found.color;
   document.getElementById('calc-modal-name').textContent = found.name;
   document.getElementById('calc-modal-desc').textContent = found.desc;
   document.getElementById('calc-modal').style.display = 'flex';
