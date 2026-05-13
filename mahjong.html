@@ -349,34 +349,28 @@
 
     <!-- 牌面輸入 -->
     <div class="card" style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin-bottom:0">輸入牌面</div>
-        <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden">
-          <button id="calc-tgt-hand" onclick="setCalcTarget('hand')" style="padding:5px 14px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:var(--text);color:var(--surface)">手牌</button>
-          <button id="calc-tgt-exp" onclick="setCalcTarget('exp')" style="padding:5px 14px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:var(--text2)">露牌</button>
-        </div>
-      </div>
+      <div class="card-title">輸入牌面</div>
       <div id="calc-hint" style="font-size:11px;color:var(--text2);margin-bottom:8px">點擊牌面加入手牌（暗牌）</div>
       <div id="calc-picker"></div>
 
       <!-- 手牌 -->
-      <div style="margin-top:10px">
+      <div id="calc-sect-hand" onclick="setCalcTarget('hand')" style="margin-top:10px;border-radius:8px;border:2px solid var(--text);padding:8px;cursor:pointer;transition:border-color .15s,background .15s">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <span style="font-size:11px;font-weight:600;color:var(--text2)">手牌（暗牌）</span>
+          <span id="calc-hand-label" style="font-size:11px;font-weight:600;color:var(--text)">▶ 手牌（暗牌）</span>
           <span id="calc-hand-cnt" style="font-size:11px;font-weight:600;color:var(--text)">0 張</span>
         </div>
-        <div id="calc-hand" style="min-height:40px;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <div id="calc-hand" style="min-height:40px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
           <span style="color:var(--text2);font-size:12px">尚未輸入</span>
         </div>
       </div>
 
       <!-- 露牌 -->
-      <div style="margin-top:8px">
+      <div id="calc-sect-exp" onclick="setCalcTarget('exp')" style="margin-top:8px;border-radius:8px;border:2px solid var(--border);padding:8px;background:var(--bg);cursor:pointer;transition:border-color .15s,background .15s">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <span style="font-size:11px;font-weight:600;color:var(--text2)">露牌（吃/碰）</span>
+          <span id="calc-exp-label" style="font-size:11px;font-weight:600;color:var(--text2)">露牌（吃/碰）</span>
           <span id="calc-exp-cnt" style="font-size:11px;font-weight:600;color:var(--text)">0 張</span>
         </div>
-        <div id="calc-exp" style="min-height:40px;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <div id="calc-exp" style="min-height:40px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
           <span style="color:var(--text2);font-size:12px">尚未輸入</span>
         </div>
       </div>
@@ -1141,9 +1135,6 @@ var CTX_DEFS = [
   { id:'hdly', name:'海底撈月', tai:1, color:'#2d8a4e', desc:'摸牌盡最後一張而自摸。' },
   { id:'ph',   name:'平胡',    tai:2,  color:'#1a6aaa', desc:'五組順子加一個對子，胡他人牌非自摸，無字花牌，兩面聽牌。釣將不算。' },
   { id:'qq',   name:'全求',    tai:2,  color:'#1a6aaa', desc:'手牌只剩一張單吊胡他人牌，其餘全吃或碰。' },
-  { id:'sak',  name:'三暗刻',  tai:2,  color:'#1a6aaa', desc:'手牌裡有三組暗刻子（碰碰胡時自動計算，此處用於非碰碰胡的情形）。' },
-  { id:'sak4', name:'四暗刻',  tai:5,  color:'#7b3ab0', desc:'手牌裡有四組暗刻子（碰碰胡時自動計算，此處用於非碰碰胡的情形）。' },
-  { id:'wak',  name:'五暗刻',  tai:8,  color:'#c0392b', desc:'手牌裡有五組暗刻子（碰碰胡時自動計算，此處用於非碰碰胡的情形）。' },
   { id:'dit',  name:'地聽',    tai:4,  color:'#7b3ab0', desc:'無人吃碰情況下，打出第一張牌即聽牌，門清不求不能算，可加計自摸。' },
   { id:'tt',   name:'天聽',    tai:8,  color:'#c0392b', desc:'配牌即聽牌，門清不求不能算，可加計自摸。' },
   { id:'tgh',  name:'天胡',    tai:16, color:'#8b0000', desc:'莊家取完牌後已胡牌。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
@@ -1152,15 +1143,12 @@ var CTX_DEFS = [
 ];
 
 var CTX_EXCL = {
-  'tgh':  ['zm','tt','dit'],
-  'rgh':  ['tt','dit'],
-  'dgh':  ['zm','tt','dit'],
-  'ph':   ['zm'],
-  'tt':   ['dit'],
-  'dit':  ['tt'],
-  'sak':  ['sak4','wak'],
-  'sak4': ['sak','wak'],
-  'wak':  ['sak','sak4']
+  'tgh': ['zm','tt','dit'],
+  'rgh': ['tt','dit'],
+  'dgh': ['zm','tt','dit'],
+  'ph':  ['zm'],
+  'tt':  ['dit'],
+  'dit': ['tt']
 };
 
 var calcRendered = false;
@@ -1190,17 +1178,23 @@ function renderCalc() {
 
 function setCalcTarget(t) {
   calcTarget = t;
-  var hBtn = document.getElementById('calc-tgt-hand');
-  var eBtn = document.getElementById('calc-tgt-exp');
-  var hint = document.getElementById('calc-hint');
+  var hint   = document.getElementById('calc-hint');
+  var hSect  = document.getElementById('calc-sect-hand');
+  var eSect  = document.getElementById('calc-sect-exp');
+  var hLabel = document.getElementById('calc-hand-label');
+  var eLabel = document.getElementById('calc-exp-label');
   if (t === 'hand') {
-    hBtn.style.background = 'var(--text)'; hBtn.style.color = 'var(--surface)';
-    eBtn.style.background = 'transparent'; eBtn.style.color = 'var(--text2)';
-    hint.textContent = '點擊牌面加入手牌（暗牌）';
+    if (hSect)  { hSect.style.borderColor = 'var(--text)';    hSect.style.background = 'var(--surface)'; }
+    if (eSect)  { eSect.style.borderColor = 'var(--border)';  eSect.style.background = 'var(--bg)'; }
+    if (hLabel) { hLabel.textContent = '▶ 手牌（暗牌）'; hLabel.style.color = 'var(--text)'; }
+    if (eLabel) { eLabel.textContent = '露牌（吃/碰）';   eLabel.style.color = 'var(--text2)'; }
+    if (hint)   hint.textContent = '點擊牌面加入手牌（暗牌）';
   } else {
-    hBtn.style.background = 'transparent'; hBtn.style.color = 'var(--text2)';
-    eBtn.style.background = 'var(--text)'; eBtn.style.color = 'var(--surface)';
-    hint.textContent = '點擊牌面加入露牌（吃/碰），每組3張';
+    if (hSect)  { hSect.style.borderColor = 'var(--border)';  hSect.style.background = 'var(--bg)'; }
+    if (eSect)  { eSect.style.borderColor = 'var(--text)';    eSect.style.background = 'var(--surface)'; }
+    if (hLabel) { hLabel.textContent = '手牌（暗牌）';       hLabel.style.color = 'var(--text2)'; }
+    if (eLabel) { eLabel.textContent = '▶ 露牌（吃/碰）';   eLabel.style.color = 'var(--text)'; }
+    if (hint)   hint.textContent = '點擊牌面加入露牌（吃/碰），每組3張';
   }
 }
 
@@ -1322,6 +1316,12 @@ function detectPatterns() {
     found.push({ name:'小三元', tai:4, color:'#7b3ab0' });
   }
 
+  // 暗刻數：只計算手牌（暗牌）裡同一張牌出現3張以上的組數
+  var ankeCount = 0;
+  Object.keys(ch).forEach(function(tk) {
+    ankeCount += Math.floor((ch[Number(tk)] || 0) / 3);
+  });
+
   // 碰碰胡：所有牌（手牌+露牌）移除一個對子後均可被3整除
   var allKeys = Object.keys(ca).map(Number);
   var isPP = false;
@@ -1337,11 +1337,16 @@ function detectPatterns() {
   }
   if (isPP) {
     found.push({ name:'碰碰胡', tai:4, color:'#1a6aaa' });
-    // 暗刻計算：手牌（暗牌）= 對子 + 暗刻組
+    // 碰碰胡時用手牌長度精確計算暗刻組數（手牌 = 1對 + n組暗刻）
     var concealedTrip = (calcHand.length - 2) / 3;
-    if (concealedTrip === 5) found.push({ name:'五暗刻', tai:8, color:'#c0392b' });
-    else if (concealedTrip === 4) found.push({ name:'四暗刻', tai:5, color:'#7b3ab0' });
-    else if (concealedTrip === 3) found.push({ name:'三暗刻', tai:2, color:'#1a6aaa' });
+    if (concealedTrip >= 5) found.push({ name:'五暗刻', tai:8, color:'#c0392b' });
+    else if (concealedTrip >= 4) found.push({ name:'四暗刻', tai:5, color:'#7b3ab0' });
+    else if (concealedTrip >= 3) found.push({ name:'三暗刻', tai:2, color:'#1a6aaa' });
+  } else if (ankeCount >= 3) {
+    // 非碰碰胡：計算手牌裡的刻子（露牌刻子不算）
+    if (ankeCount >= 5) found.push({ name:'五暗刻', tai:8, color:'#c0392b' });
+    else if (ankeCount >= 4) found.push({ name:'四暗刻', tai:5, color:'#7b3ab0' });
+    else found.push({ name:'三暗刻', tai:2, color:'#1a6aaa' });
   }
 
   return found;
