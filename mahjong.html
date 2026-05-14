@@ -43,7 +43,8 @@
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
 
   /* Nav */
-  .nav { display: flex; gap: 4px; padding: 12px 16px 0; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x; overscroll-behavior-x: contain; }
+  .nav { display: flex; gap: 4px; padding: 12px 16px 0; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: scroll; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
   .nav-btn { padding: 7px 14px; border-radius: var(--radius) var(--radius) 0 0; border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 12px; color: var(--text2); font-weight: 500; border-bottom: none; transition: all .15s; white-space: nowrap; flex-shrink: 0; }
   .nav-btn:hover { background: var(--bg); color: var(--text); }
   .nav-btn.on { background: var(--bg); color: var(--text); border-color: var(--border); border-bottom-color: var(--bg); position: relative; top: 1px; }
@@ -1507,16 +1508,21 @@ document.getElementById('e-date').value = new Date().toISOString().split('T')[0]
 load();
 
 var _nav = document.querySelector('.nav');
-var _nx, _ny;
+var _navX0 = 0, _navY0 = 0, _navL0 = 0, _navDrag = false, _navH = false;
 _nav.addEventListener('touchstart', function(e) {
-  _nx = e.touches[0].clientX;
-  _ny = e.touches[0].clientY;
+  _navX0 = e.touches[0].clientX;
+  _navY0 = e.touches[0].clientY;
+  _navL0 = _nav.scrollLeft;
+  _navDrag = true; _navH = false;
 }, { passive: true });
 _nav.addEventListener('touchmove', function(e) {
-  var dx = Math.abs(e.touches[0].clientX - _nx);
-  var dy = Math.abs(e.touches[0].clientY - _ny);
-  if (dx > dy) e.preventDefault();
+  if (!_navDrag) return;
+  var dx = _navX0 - e.touches[0].clientX;
+  var dy = Math.abs(e.touches[0].clientY - _navY0);
+  if (!_navH && Math.abs(dx) > dy && Math.abs(dx) > 3) _navH = true;
+  if (_navH) { e.preventDefault(); _nav.scrollLeft = _navL0 + dx; }
 }, { passive: false });
+_nav.addEventListener('touchend', function() { _navDrag = false; _navH = false; }, { passive: true });
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
