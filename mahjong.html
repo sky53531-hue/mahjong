@@ -1062,8 +1062,13 @@ function openProfile(name) {
   // 連勝連敗
   var streakEl = document.getElementById('pm-streak');
   if (st.g > 0) {
-    var curTxt = st.curStreak > 0 ? ('目前 ' + st.curStreak + ' 連勝') : st.curStreak < 0 ? ('目前 ' + (-st.curStreak) + ' 連敗') : '最近1場平手';
-    var curCol = st.curStreak > 0 ? 'var(--green)' : st.curStreak < 0 ? 'var(--red)' : 'var(--text2)';
+    var curAbs = Math.abs(st.curStreak);
+    var curTxt = st.curStreak >= 2 ? ('目前 ' + curAbs + ' 連勝') : st.curStreak <= -2 ? ('目前 ' + curAbs + ' 連敗') : st.curStreak === 1 ? '最近1勝' : st.curStreak === -1 ? '最近1敗' : '最近1場平手';
+    var curCol = st.curStreak >= 2 ? 'var(--green)' : st.curStreak <= -2 ? 'var(--red)' : 'var(--text2)';
+    var winTxt = st.maxWinStreak >= 2 ? st.maxWinStreak + ' 連勝' : '無';
+    var winCol = st.maxWinStreak >= 2 ? 'var(--green)' : 'var(--text2)';
+    var loseTxt = st.maxLoseStreak >= 2 ? st.maxLoseStreak + ' 連敗' : '無';
+    var loseCol = st.maxLoseStreak >= 2 ? 'var(--red)' : 'var(--text2)';
     streakEl.innerHTML =
       '<div style="display:flex;gap:8px">' +
       '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
@@ -1071,10 +1076,10 @@ function openProfile(name) {
         '<div style="font-size:13px;font-weight:700;color:' + curCol + '">' + curTxt + '</div></div>' +
       '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
         '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">最長連勝</div>' +
-        '<div style="font-size:13px;font-weight:700;color:var(--green)">' + st.maxWinStreak + ' 連勝</div></div>' +
+        '<div style="font-size:13px;font-weight:700;color:' + winCol + '">' + winTxt + '</div></div>' +
       '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
         '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">最長連敗</div>' +
-        '<div style="font-size:13px;font-weight:700;color:var(--red)">' + st.maxLoseStreak + ' 連敗</div></div>' +
+        '<div style="font-size:13px;font-weight:700;color:' + loseCol + '">' + loseTxt + '</div></div>' +
       '</div>';
   } else {
     streakEl.innerHTML = '';
