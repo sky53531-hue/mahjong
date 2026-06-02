@@ -324,11 +324,21 @@
 
         <!-- 個人統計 -->
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">個人戰績</div>
-        <div id="pm-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
+        <div id="pm-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px"></div>
 
-        <!-- 近期紀錄 -->
-        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">近期5場</div>
-        <div id="pm-recent"></div>
+        <!-- 連勝連敗 -->
+        <div id="pm-streak" style="margin-bottom:16px"></div>
+
+        <!-- 月份統計 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">月份統計</div>
+        <div id="pm-monthly" style="margin-bottom:16px"></div>
+
+        <!-- 全部紀錄 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">全部出賽紀錄</div>
+          <div id="pm-game-count" style="font-size:11px;color:var(--text2)"></div>
+        </div>
+        <div id="pm-recent" style="max-height:320px;overflow-y:auto;border-radius:8px"></div>
 
         <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;margin-top:16px">💾 儲存資料</button>
       </div>
@@ -942,17 +952,34 @@ function exportExcel() {
 
 // ── 選手資料 ──
 function getPlayerStats(name) {
-  var st = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null, recent: [] };
+  var st = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null, recent: [],
+             curStreak: 0, maxWinStreak: 0, maxLoseStreak: 0 };
   var sorted = R.slice().sort(function(a,b){ return b.date.localeCompare(a.date)||b.id-a.id; });
+  var tmpWin = 0, tmpLose = 0;
   sorted.forEach(function(r) {
     if (!(name in r.sc)) return;
     var v = r.sc[name], fv = (r.fe && r.fe[name]) || 0;
     st.sc += v; st.fe += fv; st.g++;
-    if (v > 0) st.w++;
+    if (v > 0) {
+      st.w++; tmpWin++; tmpLose = 0;
+      if (tmpWin > st.maxWinStreak) st.maxWinStreak = tmpWin;
+    } else {
+      tmpLose++; tmpWin = 0;
+      if (tmpLose > st.maxLoseStreak) st.maxLoseStreak = tmpLose;
+    }
     if (st.best === null || v > st.best) st.best = v;
     if (st.worst === null || v < st.worst) st.worst = v;
-    if (st.recent.length < 5) st.recent.push({ date: r.date, ses: r.ses, sc: v, fe: fv });
+    st.recent.push({ date: r.date, ses: r.ses, sc: v, fe: fv });
   });
+  if (st.recent.length > 0) {
+    var isWin = st.recent[0].sc > 0;
+    var cnt = 0;
+    for (var i = 0; i < st.recent.length; i++) {
+      if ((st.recent[i].sc > 0) === isWin) cnt++;
+      else break;
+    }
+    st.curStreak = isWin ? cnt : -cnt;
+  }
   return st;
 }
 
@@ -1016,25 +1043,82 @@ function openProfile(name) {
 
   var net = f2(st.sc - st.fe);
   var wr = st.g ? Math.round(st.w / st.g * 100) : 0;
+  var avg = st.g ? f2(st.sc / st.g) : 0;
   document.getElementById('pm-stats').innerHTML = [
     { l: '出賽場次', v: st.g + ' 場', c: '' },
     { l: '輸贏合計', v: fs(st.sc), c: st.sc > 0 ? 'var(--green)' : st.sc < 0 ? 'var(--red)' : '' },
     { l: '實際淨值', v: fs(net), c: net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '' },
-    { l: '總參賽費', v: f2(st.fe), c: 'var(--red)' },
-    { l: '勝場率', v: st.w + '勝(' + wr + '%)', c: wr >= 50 ? 'var(--green)' : '' },
-    { l: '最佳單場', v: st.best !== null ? (st.best >= 0 ? '+' : '') + st.best : '-', c: 'var(--green)' }
+    { l: '總參賽費', v: f2(st.fe) > 0 ? '-' + f2(st.fe) : '0', c: st.fe > 0 ? 'var(--red)' : '' },
+    { l: '勝場率', v: st.w + '勝 ' + wr + '%', c: wr >= 50 ? 'var(--green)' : 'var(--red)' },
+    { l: '場均淨值', v: (avg >= 0 ? '+' : '') + avg, c: avg > 0 ? 'var(--green)' : avg < 0 ? 'var(--red)' : '' },
+    { l: '最佳單場', v: st.best !== null ? (st.best >= 0 ? '+' : '') + st.best : '-', c: 'var(--green)' },
+    { l: '最差單場', v: st.worst !== null ? (st.worst >= 0 ? '+' : '') + st.worst : '-', c: 'var(--red)' }
   ].map(function(x) {
     return '<div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
       '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">' + x.l + '</div>' +
       '<div style="font-size:13px;font-weight:700' + (x.c ? ';color:' + x.c : '') + '">' + x.v + '</div></div>';
   }).join('');
 
+  // 連勝連敗
+  var streakEl = document.getElementById('pm-streak');
+  if (st.g > 0) {
+    var curTxt = st.curStreak > 0 ? ('目前 ' + st.curStreak + ' 連勝') : st.curStreak < 0 ? ('目前 ' + (-st.curStreak) + ' 連敗') : '最近1場平手';
+    var curCol = st.curStreak > 0 ? 'var(--green)' : st.curStreak < 0 ? 'var(--red)' : 'var(--text2)';
+    streakEl.innerHTML =
+      '<div style="display:flex;gap:8px">' +
+      '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">當前狀態</div>' +
+        '<div style="font-size:13px;font-weight:700;color:' + curCol + '">' + curTxt + '</div></div>' +
+      '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">最長連勝</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--green)">' + st.maxWinStreak + ' 連勝</div></div>' +
+      '<div style="flex:1;background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">最長連敗</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--red)">' + st.maxLoseStreak + ' 連敗</div></div>' +
+      '</div>';
+  } else {
+    streakEl.innerHTML = '';
+  }
+
+  // 月份統計
+  var monthMap = {};
+  st.recent.forEach(function(r) {
+    var ym = r.date.substring(0, 6); // "115/05"
+    if (!monthMap[ym]) monthMap[ym] = { g: 0, w: 0, sc: 0, fe: 0 };
+    monthMap[ym].g++;
+    if (r.sc > 0) monthMap[ym].w++;
+    monthMap[ym].sc += r.sc;
+    monthMap[ym].fe += r.fe;
+  });
+  var months = Object.keys(monthMap).sort(function(a,b){ return b.localeCompare(a); });
+  var monthEl = document.getElementById('pm-monthly');
+  if (months.length === 0) {
+    monthEl.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:6px 0">尚無紀錄</div>';
+  } else {
+    monthEl.innerHTML = '<div style="font-size:11px">' +
+      '<div style="display:grid;grid-template-columns:3fr 1fr 1fr 2fr 2fr;gap:4px;padding:4px 6px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)">' +
+        '<div>月份</div><div style="text-align:center">場次</div><div style="text-align:center">勝場</div><div style="text-align:right">輸贏</div><div style="text-align:right">淨值</div></div>' +
+      months.map(function(ym) {
+        var m = monthMap[ym];
+        var mnet = f2(m.sc - m.fe);
+        return '<div style="display:grid;grid-template-columns:3fr 1fr 1fr 2fr 2fr;gap:4px;padding:6px 6px;border-bottom:1px solid var(--border)">' +
+          '<div>' + ym + '</div>' +
+          '<div style="text-align:center">' + m.g + '</div>' +
+          '<div style="text-align:center">' + m.w + '</div>' +
+          '<div style="text-align:right;color:' + (m.sc > 0 ? 'var(--green)' : m.sc < 0 ? 'var(--red)' : 'var(--text2)') + '">' + fs(m.sc) + '</div>' +
+          '<div style="text-align:right;color:' + (mnet > 0 ? 'var(--green)' : mnet < 0 ? 'var(--red)' : 'var(--text2)') + '">' + fs(mnet) + '</div>' +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
+  // 全部紀錄
+  document.getElementById('pm-game-count').textContent = st.g ? '共 ' + st.g + ' 場' : '';
   if (st.recent.length === 0) {
     document.getElementById('pm-recent').innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0">尚無比賽紀錄</div>';
   } else {
     document.getElementById('pm-recent').innerHTML = st.recent.map(function(r) {
       var nt = f2(r.sc - r.fe);
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">' +
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border)">' +
         '<div><div style="font-size:12px;font-weight:500">' + r.date + ' ' + r.ses + '</div>' +
         '<div style="font-size:11px;color:var(--text2)">參賽費 ' + r.fe + '</div></div>' +
         '<div style="text-align:right">' +
