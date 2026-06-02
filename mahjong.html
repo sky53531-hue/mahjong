@@ -208,14 +208,15 @@
   <div id="pg-entry" class="pg on">
 
     <!-- 冠軍橫幅 -->
-    <div id="champion-banner" style="display:none;background:linear-gradient(135deg,#1a1200,#2d2000);border:1px solid var(--amber);border-radius:16px;padding:16px 20px;margin-bottom:12px;position:relative;overflow:hidden">
-      <div style="position:absolute;top:-10px;right:8px;font-size:90px;opacity:0.07;line-height:1;pointer-events:none">🏆</div>
-      <div style="font-size:10px;font-weight:600;color:var(--amber);letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">目前排行榜冠軍</div>
+    <div id="champion-banner" style="display:none;background:linear-gradient(135deg,rgba(255,180,0,0.13),rgba(255,150,0,0.07));border:1px solid rgba(255,180,0,0.45);border-radius:16px;padding:16px 20px;margin-bottom:12px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-10px;right:8px;font-size:90px;opacity:0.09;line-height:1;pointer-events:none">🏆</div>
+      <div style="font-size:10px;font-weight:600;color:var(--amber);letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">🏆 目前排行榜冠軍</div>
       <div style="display:flex;align-items:center;gap:12px">
-        <div id="cb-avatar" style="width:52px;height:52px;border-radius:50%;background:var(--bg);border:2px solid var(--amber);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">👤</div>
+        <div id="cb-avatar" style="width:56px;height:56px;border-radius:50%;background:var(--bg);border:2px solid var(--amber);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">👤</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:20px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="cb-name"></div>
           <div style="font-size:12px;color:var(--amber);margin-top:2px" id="cb-net"></div>
+          <div id="cb-bio" style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.45;display:none"></div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:26px;font-weight:800;color:var(--amber);line-height:1" id="cb-days"></div>
@@ -663,6 +664,14 @@ function renderChampionBanner() {
   document.getElementById('cb-name').textContent = info.name;
   document.getElementById('cb-net').textContent = '實際淨值 ' + (info.net >= 0 ? '+' : '') + info.net;
   document.getElementById('cb-days').textContent = info.days + ' 天';
+  var bioEl = document.getElementById('cb-bio');
+  var bio = prof.bio ? prof.bio.trim() : '';
+  if (bio) {
+    bioEl.textContent = '"' + bio + '"';
+    bioEl.style.display = 'block';
+  } else {
+    bioEl.style.display = 'none';
+  }
   banner.style.display = 'block';
 }
 
