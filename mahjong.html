@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>柒樓麻將館</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="柒樓麻將館">
+<meta name="theme-color" content="#1a1a18">
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --border: #e4e2dc;
+    --border2: #ccc9c0;
+    --text: #1a1a18;
+    --text2: #6b6960;
+    --text3: #9b9890;
+    --green: #2d6a2d;
+    --green-bg: #eaf3de;
+    --red: #a32d2d;
+    --red-bg: #fcebeb;
+    --amber: #7a4f0a;
+    --amber-bg: #faeeda;
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+  /* Header */
+  .app-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; }
+  .app-title { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px; }
+  .app-title span { font-size: 20px; }
+  .sync-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .sync-dot.err { background: var(--red); }
+  .sync-dot.spin { background: var(--amber); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* Nav */
+  .nav { display: flex; gap: 4px; padding: 12px 16px 0; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: scroll; touch-action: pan-x; overscroll-behavior-x: contain; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn { padding: 7px 14px; border-radius: var(--radius) var(--radius) 0 0; border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 12px; color: var(--text2); font-weight: 500; border-bottom: none; transition: all .15s; white-space: nowrap; flex-shrink: 0; }
+  .nav-btn:hover { background: var(--bg); color: var(--text); }
+  .nav-btn.on { background: var(--bg); color: var(--text); border-color: var(--border); border-bottom-color: var(--bg); position: relative; top: 1px; }
+
+  /* Main */
+  .main { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+  .pg { display: none; }
+  .pg.on { display: block; }
+
+  /* Card */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--text); }
+
+  /* Form */
+  .form-row { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 14px; }
+  @media (min-width: 560px) { .form-row { grid-template-columns: repeat(3, 1fr); } }
+  .fg label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .4px; }
+  .fg input, .fg select, input[type=text], input[type=date], input[type=number], select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text); background: var(--surface); outline: none; transition: border-color .15s; }
+  input:focus, select:focus { border-color: var(--border2); }
+  input[type=date] { -webkit-appearance: none; appearance: none; text-align: left; min-width: 0; }
+
+  /* Player grid */
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; margin: 12px 0; }
+  .pbox { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .pbox .pn { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+  .irow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .irow .lbl { font-size: 11px; color: var(--text2); width: 38px; flex-shrink: 0; }
+  .irow input { flex: 1; min-width: 0; text-align: right; font-size: 14px; font-weight: 500; padding: 5px 8px; }
+  .netl { font-size: 11px; color: var(--text2); text-align: right; padding-top: 6px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .netl b { font-weight: 600; }
+
+  /* Sum bar */
+  .sum-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg); margin-top: 12px; }
+  .sum-label { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .sum-val { font-size: 20px; font-weight: 700; }
+
+  /* Buttons */
+  .btn { padding: 8px 18px; border-radius: var(--radius); border: 1px solid var(--border2); cursor: pointer; font-size: 13px; font-weight: 500; background: var(--surface); color: var(--text); transition: all .15s; }
+  .btn:hover { background: var(--bg); }
+  .btn-primary { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .btn-primary:hover { opacity: .85; background: var(--text); }
+  .btn-danger { color: var(--red); border-color: #f0c0c0; }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+  /* Metrics */
+  .mgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; margin-bottom: 16px; }
+  .mc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .mc .ml { font-size: 11px; color: var(--text2); margin-bottom: 4px; font-weight: 500; }
+  .mc .mv { font-size: 20px; font-weight: 700; color: var(--text); }
+
+  /* Filter row */
+  .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .frow label { font-size: 12px; color: var(--text2); font-weight: 500; }
+  .frow input[type=date], .frow select { width: auto; font-size: 12px; padding: 6px 10px; }
+
+  /* View toggle */
+  .vtog { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; width: fit-content; margin-bottom: 14px; }
+  .vb { padding: 7px 18px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: var(--text2); transition: all .15s; }
+  .vb.on { background: var(--text); color: var(--surface); }
+
+  /* Rank table */
+  .tbl-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { padding: 9px 10px; border-bottom: 1px solid var(--border); color: var(--text2); font-weight: 600; text-align: left; white-space: nowrap; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+  td { padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg); }
+
+  /* Badges */
+  .bw { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--green-bg); color: var(--green); }
+  .bl { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--red-bg); color: var(--red); }
+  .bn { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--bg); color: var(--text2); }
+  .pos { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 50%; font-size: 11px; font-weight: 700; }
+  .p1 { background: var(--amber-bg); color: var(--amber); }
+  .p2 { background: #f1efe8; color: #555; }
+  .p3 { background: var(--red-bg); color: var(--red); }
+  .plus { color: var(--green); font-weight: 600; }
+  .minus { color: var(--red); font-weight: 600; }
+
+  /* Summary cards */
+  .scard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 10px; }
+  .sh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .sg { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .si .sl { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .si .sv2 { font-size: 13px; font-weight: 600; }
+
+  /* Det cards */
+  .det-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+  .det-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .det-date { font-size: 13px; font-weight: 600; }
+  .det-ses { font-size: 12px; color: var(--text2); margin-left: 6px; }
+  .det-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 8px; }
+  .det-p { background: var(--bg); border-radius: 8px; padding: 9px 11px; }
+  .det-pname { font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .3px; }
+  .det-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+  .det-row span:first-child { color: var(--text2); }
+  .det-net { display: flex; justify-content: space-between; font-size: 12px; padding-top: 5px; border-top: 1px solid var(--border); margin-top: 3px; }
+  .det-net span:first-child { color: var(--text2); }
+
+  /* Player list */
+  .plist { display: grid; gap: 8px; }
+  .pitem { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--bg); border-radius: var(--radius); border: 1px solid var(--border); }
+  .pnum { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: 50%; font-size: 11px; color: var(--text2); flex-shrink: 0; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 9px 20px; border-radius: var(--radius); font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 999; white-space: nowrap; font-weight: 500; }
+  .toast.show { opacity: 1; }
+  .empty { text-align: center; padding: 2.5rem; color: var(--text2); font-size: 13px; }
+
+  /* Loading */
+  .loading { display: flex; align-items: center; gap: 8px; padding: 20px; color: var(--text2); font-size: 13px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sep { font-size: 11px; color: var(--text3); }
+  .section-hdr { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 4px; }
+  .section-title { font-size: 13px; font-weight: 600; }
+  .hint-text { font-size: 11px; color: var(--text2); margin-bottom: 10px; }
+
+  /* Calc */
+  .calc-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border-radius: 8px; border: 1px solid var(--border); transition: opacity .15s; }
+  .calc-cb { width: 20px; height: 20px; flex-shrink: 0; cursor: pointer; }
+  .calc-name { flex: 1; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .calc-tai-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; flex-shrink: 0; }
+  .calc-info-btn { border: none; background: var(--bg); border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 12px; color: var(--text2); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .calc-info-btn:hover { background: var(--border); }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title"><span>🀄</span> 柒樓麻將館</div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button onclick="exportBackup()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-size:12px;font-weight:500;color:var(--text2)">
+      ⬇ 備份JSON
+    </button>
+    <button onclick="exportExcel()" style="padding:5px 12px;border-radius:8px;border:1px solid #2d6a2d;background:#eaf3de;cursor:pointer;font-size:12px;font-weight:500;color:#2d6a2d">
+      📊 匯出Excel
+    </button>
+    <div class="sync-badge">
+      <div class="sync-dot spin" id="sync-dot"></div>
+      <span id="sync-label">連線中...</span>
+    </div>
+  </div>
+</header>
+
+<nav class="nav">
+  <button class="nav-btn on" onclick="goTab('entry',this)">＋ 新增紀錄</button>
+  <button class="nav-btn" onclick="goTab('rank',this)">🏆 排行榜</button>
+  <button class="nav-btn" onclick="goTab('rec',this)">☰ 所有紀錄</button>
+  <button class="nav-btn" onclick="goTab('profile',this)">👤 選手資料</button>
+  <button class="nav-btn" onclick="goTab('calc',this)">🀄 台數計算</button>
+  <button class="nav-btn" onclick="goTab('rules',this)">📖 台數對照表</button>
+  <button class="nav-btn" onclick="goTab('mgr',this)">⚙ 參賽者管理</button>
+</nav>
+
+<div class="main">
+
+  <!-- 新增紀錄 -->
+  <div id="pg-entry" class="pg on">
+    <div class="card">
+      <div class="card-title">比賽資訊</div>
+      <div class="form-row">
+        <div class="fg"><label>日期</label><input type="date" id="e-date"></div>
+        <div class="fg"><label>場次</label><select id="e-session"><option value="">請選擇場次</option><option>第1場</option><option>第2場</option><option>第3場</option><option>第4場</option><option>第5場</option><option>第6場</option><option>第7場</option><option>第8場</option><option>第9場</option><option>第10場</option></select></div>
+        <div class="fg"><label>備註（選填）</label><input type="text" id="e-note"></div>
+      </div>
+      <div class="section-hdr">
+        <div class="section-title">輸贏與參賽費</div>
+        <button class="btn btn-danger" style="font-size:11px;padding:5px 12px" onclick="clearInputs()">✕ 清除所有輸入值</button>
+      </div>
+      <div class="hint-text">贏：填入贏的金額 ｜ 輸：填入輸的金額（均填正數）｜ 參賽費：本場繳交金額（空白=0）</div>
+      <div class="pgrid" id="e-grid"><div class="loading"><div class="spinner"></div>載入中...</div></div>
+      <div class="sum-bar">
+        <div>
+          <div class="sum-label">輸贏合計（僅統計已填寫欄位）</div>
+          <div class="sum-val" id="sum-val" style="color:var(--text2)">0</div>
+        </div>
+        <div id="sum-status"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="doSave()">💾 儲存紀錄</button>
+        <button class="btn" onclick="clearInputs()">↺ 重新輸入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排行榜 -->
+  <div id="pg-rank" class="pg">
+    <div class="frow">
+      <label>日期範圍：</label>
+      <input type="date" id="r-from" onchange="renderRank()">
+      <span class="sep">至</span>
+      <input type="date" id="r-to" onchange="renderRank()">
+      <button class="btn" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('r-from').value='';document.getElementById('r-to').value='';renderRank()">清除</button>
+    </div>
+    <div class="mgrid" id="r-meta"></div>
+
+    <div class="card-title" style="font-size:14px;font-weight:600;margin-bottom:10px">🏆 綜合排行榜</div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>名次</th><th>姓名</th><th>場次</th>
+            <th>輸贏合計</th><th>總參賽費</th><th>實際淨值</th>
+            <th>最佳單場</th><th>最差單場</th><th>勝場率</th>
+          </tr></thead>
+          <tbody id="r-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="font-size:14px;font-weight:600;margin:20px 0 10px">🀄 場均自摸排行榜</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">計算方式：參賽費 ÷ 50 = 自摸次數，自摸次數 ÷ 出賽場次 = 場均自摸</div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>名次</th><th>姓名</th><th>出賽場次</th>
+            <th>總參賽費</th><th>自摸總次數</th><th>場均自摸次數</th>
+          </tr></thead>
+          <tbody id="zimo-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 所有紀錄 -->
+  <div id="pg-rec" class="pg">
+    <div class="frow">
+      <label>日期：</label>
+      <input type="date" id="f-from" onchange="renderRec()">
+      <span class="sep">至</span>
+      <input type="date" id="f-to" onchange="renderRec()">
+      <label>參賽者：</label>
+      <select id="f-p" onchange="renderRec()"><option value="">全部</option></select>
+      <button class="btn" style="font-size:12px;padding:5px 12px" onclick="clearRecF()">清除</button>
+    </div>
+    <div class="vtog">
+      <button class="vb on" onclick="switchView('sum',this)">區間總統計</button>
+      <button class="vb" onclick="switchView('det',this)">逐場明細</button>
+    </div>
+    <div id="v-sum"></div>
+    <div id="v-det" style="display:none"></div>
+  </div>
+
+  <!-- 選手個人資料 -->
+  <div id="pg-profile" class="pg">
+
+    <!-- 選手資料彈窗 -->
+    <div id="profile-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px">
+      <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:480px;width:100%;position:relative;margin:auto">
+        <button onclick="closeProfileModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:22px;cursor:pointer;color:var(--text2)">✕</button>
+
+        <!-- 大頭照 -->
+        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:20px">
+          <div id="pm-avatar" style="width:96px;height:96px;border-radius:50%;background:var(--bg);border:2px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:12px">👤</div>
+          <label style="cursor:pointer;font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);padding:5px 14px;border-radius:8px">
+            📷 上傳大頭照
+            <input type="file" accept="image/*" id="pm-upload" style="display:none" onchange="uploadAvatar(this)">
+          </label>
+          <div id="pm-upload-status" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+        </div>
+
+        <!-- 姓名 -->
+        <div style="font-size:20px;font-weight:700;text-align:center;margin-bottom:4px" id="pm-name"></div>
+        <div style="text-align:center;margin-bottom:16px">
+          <span id="pm-rank-badge" style="font-size:12px;font-weight:600;padding:3px 12px;border-radius:999px;background:var(--amber-bg);color:var(--amber)"></span>
+        </div>
+
+        <!-- 個人簡介 -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">個人簡介</div>
+          <textarea id="pm-bio" rows="3" placeholder="輸入個人簡介..." style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;resize:none;color:var(--text);background:var(--bg)"></textarea>
+        </div>
+
+        <!-- 個人統計 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">個人戰績</div>
+        <div id="pm-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
+
+        <!-- 近期紀錄 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">近期5場</div>
+        <div id="pm-recent"></div>
+
+        <button onclick="saveProfile()" class="btn btn-primary" style="width:100%;margin-top:16px">💾 儲存資料</button>
+      </div>
+    </div>
+
+    <!-- 選手卡片列表 -->
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">點擊選手卡片查看個人資料與戰績</div>
+    <div id="profile-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px"></div>
+  </div>
+
+  <!-- 台數計算 -->
+  <div id="pg-calc" class="pg">
+    <!-- 台數 + 自動偵測 -->
+    <div class="card" style="text-align:center;margin-bottom:16px;padding:24px 20px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">目前台數</div>
+      <div id="calc-total" style="font-size:60px;font-weight:800;color:var(--text2);line-height:1.1">0</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:4px">台</div>
+      <div id="calc-auto-list" style="margin-top:12px;display:flex;flex-wrap:wrap;justify-content:center;gap:5px;min-height:24px"></div>
+    </div>
+
+    <!-- 牌面輸入 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">輸入牌面</div>
+      <div id="calc-hint" style="font-size:11px;color:var(--text2);margin-bottom:8px">點擊牌面加入手牌（暗牌）</div>
+      <div id="calc-picker"></div>
+
+      <!-- 手牌 -->
+      <div id="calc-sect-hand" onclick="setCalcTarget('hand')" style="margin-top:10px;border-radius:8px;border:2px solid var(--text);padding:8px;cursor:pointer;transition:border-color .15s,background .15s">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span id="calc-hand-label" style="font-size:11px;font-weight:600;color:var(--text)">▶ 手牌（暗牌）</span>
+          <span id="calc-hand-cnt" style="font-size:11px;font-weight:600;color:var(--text)">0 張</span>
+        </div>
+        <div id="calc-hand" style="min-height:40px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+          <span style="color:var(--text2);font-size:12px">尚未輸入</span>
+        </div>
+      </div>
+
+      <!-- 露牌 -->
+      <div id="calc-sect-exp" onclick="setCalcTarget('exp')" style="margin-top:8px;border-radius:8px;border:2px solid var(--border);padding:8px;background:var(--bg);cursor:pointer;transition:border-color .15s,background .15s">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span id="calc-exp-label" style="font-size:11px;font-weight:600;color:var(--text2)">露牌（吃/碰）</span>
+          <span id="calc-exp-cnt" style="font-size:11px;font-weight:600;color:var(--text)">0 張</span>
+        </div>
+        <div id="calc-exp" style="min-height:40px;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+          <span style="color:var(--text2);font-size:12px">尚未輸入</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 情境條件 -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">情境條件</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">門清、暗刻組數（碰碰胡時）自動偵測；以下須手動選擇</div>
+      <div id="calc-ctx" style="display:grid;gap:6px"></div>
+    </div>
+
+    <button class="btn btn-danger" style="width:100%;margin-bottom:16px" onclick="clearCalcAll()">✕ 清除全部</button>
+
+    <!-- 說明 Modal -->
+    <div id="calc-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:300;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:400px;width:90%;position:relative">
+        <button onclick="closeCalcModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>
+        <div id="calc-modal-tai" style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:6px"></div>
+        <div id="calc-modal-name" style="font-size:20px;font-weight:700;margin-bottom:12px"></div>
+        <div id="calc-modal-desc" style="font-size:14px;line-height:1.8;color:var(--text)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 台數對照表 -->
+  <div id="pg-rules" class="pg">
+
+    <!-- 彈窗 -->
+    <div id="rule-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center">
+      <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:420px;width:90%;max-height:80vh;overflow-y:auto;position:relative">
+        <button onclick="closeModal()" style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>
+        <div id="modal-tai" style="font-size:12px;font-weight:700;letter-spacing:1px;margin-bottom:6px"></div>
+        <div id="modal-name" style="font-size:20px;font-weight:700;margin-bottom:12px"></div>
+        <div id="modal-desc" style="font-size:14px;line-height:1.8;color:var(--text)"></div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">點擊牌型可查看詳細說明</div>
+    <div id="rules-content"></div>
+  </div>
+
+  <!-- 參賽者管理 -->
+  <div id="pg-mgr" class="pg">
+    <div class="card">
+      <div class="card-title">參賽者名單</div>
+      <div class="plist" id="p-list"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="p-new" placeholder="新增參賽者姓名" style="max-width:200px">
+        <button class="btn btn-primary" onclick="addP()">新增</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- 編輯紀錄 Modal -->
+<div id="edit-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:250;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px">
+  <div style="background:var(--surface);border-radius:16px;padding:20px;max-width:560px;width:100%;position:relative;margin:auto">
+    <button onclick="closeEditModal()" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:22px;cursor:pointer;color:var(--text2)">✕</button>
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">✏️ 編輯紀錄</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">日期</label>
+        <input type="date" id="edit-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">場次</label>
+        <select id="edit-session" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">
+          <option>第1場</option><option>第2場</option><option>第3場</option><option>第4場</option>
+          <option>第5場</option><option>第6場</option><option>第7場</option><option>第8場</option>
+          <option>第9場</option><option>第10場</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">備註</label>
+        <input type="text" id="edit-note" placeholder="選填" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">
+      </div>
+    </div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:10px">參賽者資料</div>
+    <div id="edit-players-area"></div>
+    <button onclick="editAddPlayer()" style="width:100%;padding:9px;border:1.5px dashed var(--border2);border-radius:var(--radius);background:transparent;color:var(--text2);font-size:13px;cursor:pointer;margin-bottom:14px">＋ 新增參賽者</button>
+    <div id="edit-sum-bar" style="padding:10px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:14px;border:1px solid var(--border)"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="saveEdit()" class="btn btn-primary" style="flex:1">💾 儲存修改</button>
+      <button onclick="closeEditModal()" class="btn">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var BIN_ID = '69fef118250b1311c3258d94';
+var API_KEY = '$2a$10$vXNSb0IG/J6l2iaqedRwEO/.LRfZZ2p/OFLPE7Zveg2BI7v7LFl3K';
+var BASE = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
+var P = [], R = [], curView = 'sum';
+var PROFILES = {};
+var currentProfilePlayer = null;
+var editId = null, editRows = [];
+var CLOUD_NAME = 'dgvkudiqi';
+var UPLOAD_PRESET = 'mahjong_upload';
+
+function tip(m) {
+  var t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2200);
+}
+function f2(v) { return Math.round(v * 100) / 100; }
+function fs(v) { var r = f2(v); return (r > 0 ? '+' : '') + r; }
+function eid(s) { var i = P.indexOf(s); return 'p_' + (i >= 0 ? i : s.replace(/[^a-zA-Z0-9]/g, '_')); }
+function readNum(el) {
+  if (!el) return null;
+  var v = el.value.trim();
+  if (v === '') return null;
+  var n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+function setSyncStatus(state, msg) {
+  var dot = document.getElementById('sync-dot');
+  var lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot' + (state === 'ok' ? '' : state === 'err' ? ' err' : ' spin');
+  lbl.textContent = msg;
+}
+
+async function apiGet() {
+  var res = await fetch(BASE + '/latest', { headers: { 'X-Master-Key': API_KEY } });
+  if (!res.ok) throw new Error('讀取失敗');
+  var json = await res.json();
+  return json.record;
+}
+
+async function apiPut(data) {
+  var res = await fetch(BASE, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error('寫入失敗');
+}
+
+async function load() {
+  setSyncStatus('loading', '連線中...');
+  try {
+    var data = await apiGet();
+    P = data.players || ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
+    R = data.records || [];
+    PROFILES = data.profiles || {};
+    setSyncStatus('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    setSyncStatus('err', '連線失敗');
+    P = ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
+    R = [];
+    PROFILES = {};
+    tip('⚠ 無法連線至資料庫');
+  }
+  buildEntry();
+}
+
+async function saveAll() {
+  setSyncStatus('loading', '儲存中...');
+  try {
+    await apiPut({ players: P, records: R, profiles: PROFILES });
+    setSyncStatus('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'}));
+  } catch(e) {
+    setSyncStatus('err', '儲存失敗');
+    tip('⚠ 儲存失敗，請檢查網路');
+  }
+}
+
+function goTab(id, el) {
+  document.querySelectorAll('.pg').forEach(function(x) { x.classList.remove('on'); });
+  document.querySelectorAll('.nav-btn').forEach(function(x) { x.classList.remove('on'); });
+  document.getElementById('pg-' + id).classList.add('on');
+  el.classList.add('on');
+  if (id === 'rank') renderRank();
+  if (id === 'rec') { buildRecFilter(); renderRec(); }
+  if (id === 'mgr') renderMgr();
+  if (id === 'calc') renderCalc();
+  if (id === 'rules') renderRules();
+  if (id === 'profile') renderProfileGrid();
+}
+
+function switchView(v, el) {
+  curView = v;
+  document.querySelectorAll('.vb').forEach(function(x) { x.classList.remove('on'); });
+  el.classList.add('on');
+  document.getElementById('v-sum').style.display = v === 'sum' ? 'block' : 'none';
+  document.getElementById('v-det').style.display = v === 'det' ? 'block' : 'none';
+  renderRec();
+}
+
+function buildEntry() {
+  var g = document.getElementById('e-grid');
+  g.innerHTML = P.map(function(p) {
+    var id = eid(p);
+    var prof = PROFILES[p] || {};
+    var avatar = prof.avatar
+      ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+      : '👤';
+    return '<div class="pbox">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+      '<div style="width:36px;height:36px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">' + avatar + '</div>' +
+      '<div class="pn" style="margin-bottom:0">' + p + '</div></div>' +
+      '<div class="irow"><span class="lbl">贏</span><input type="number" step="any" min="0" id="win-' + id + '" oninput="updateAll()" placeholder="0"></div>' +
+      '<div class="irow"><span class="lbl">輸</span><input type="number" step="any" min="0" id="lose-' + id + '" oninput="updateAll()" placeholder="0"></div>' +
+      '<div class="irow"><span class="lbl">參賽費</span><input type="number" step="any" min="0" id="fe-' + id + '" oninput="updateAll()"></div>' +
+      '<div class="netl">淨值：<b id="nt-' + id + '" style="color:var(--text2)">-</b></div></div>';
+  }).join('');
+  updateAll();
+}
+
+function updateAll() {
+  var sum = 0, hasAny = false;
+  P.forEach(function(p) {
+    var id = eid(p);
+    var win = readNum(document.getElementById('win-' + id));
+    var lose = readNum(document.getElementById('lose-' + id));
+    var sc = (win !== null || lose !== null) ? ((win || 0) - (lose || 0)) : null;
+    var fe = readNum(document.getElementById('fe-' + id));
+    var ntEl = document.getElementById('nt-' + id);
+    if (!ntEl) return;
+    if (sc !== null) {
+      sum += sc; hasAny = true;
+      var nt = f2(sc - (fe !== null ? fe : 0));
+      ntEl.textContent = (nt > 0 ? '+' : '') + nt;
+      ntEl.style.color = nt > 0 ? 'var(--green)' : nt < 0 ? 'var(--red)' : 'var(--text2)';
+    } else {
+      ntEl.textContent = '-'; ntEl.style.color = 'var(--text2)';
+    }
+  });
+  var r = f2(sum);
+  var valEl = document.getElementById('sum-val');
+  var stEl = document.getElementById('sum-status');
+  if (!hasAny) {
+    valEl.textContent = '0'; valEl.style.color = 'var(--text2)'; stEl.innerHTML = ''; return;
+  }
+  valEl.textContent = (r > 0 ? '+' : '') + r;
+  if (r === 0) {
+    valEl.style.color = 'var(--green)';
+    stEl.innerHTML = '<span style="color:var(--green);font-size:13px;font-weight:600">✓ 合計正確</span>';
+  } else {
+    valEl.style.color = 'var(--red)';
+    stEl.innerHTML = '<span style="color:var(--red);font-size:13px;font-weight:600">⚠ 合計應為 0</span>';
+  }
+}
+
+function clearInputs() {
+  P.forEach(function(p) {
+    var id = eid(p);
+    var win = document.getElementById('win-' + id);
+    var lose = document.getElementById('lose-' + id);
+    var fe = document.getElementById('fe-' + id);
+    var nt = document.getElementById('nt-' + id);
+    if (win) win.value = ''; if (lose) lose.value = ''; if (fe) fe.value = '';
+    if (nt) { nt.textContent = '-'; nt.style.color = 'var(--text2)'; }
+  });
+  document.getElementById('sum-val').textContent = '0';
+  document.getElementById('sum-val').style.color = 'var(--text2)';
+  document.getElementById('sum-status').innerHTML = '';
+  tip('已清除所有輸入值');
+}
+
+async function doSave() {
+  var date = document.getElementById('e-date').value;
+  var ses = document.getElementById('e-session').value.trim();
+  var note = document.getElementById('e-note').value.trim();
+  if (!date) { alert('請選擇日期'); return; }
+  if (!ses) { alert('請填寫場次'); return; }
+  var sc = {}, fe = {}, cnt = 0, sum = 0;
+  P.forEach(function(p) {
+    var id = eid(p);
+    var win = readNum(document.getElementById('win-' + id));
+    var lose = readNum(document.getElementById('lose-' + id));
+    var fv = readNum(document.getElementById('fe-' + id));
+    if (win !== null || lose !== null) {
+      var sv = (win || 0) - (lose || 0);
+      sc[p] = sv; fe[p] = fv !== null ? fv : 0; cnt++; sum += sv;
+    }
+  });
+  if (cnt < 2) { alert('請至少輸入2位參賽者的輸贏值'); return; }
+  var r = f2(sum);
+  if (r !== 0 && !confirm('輸贏合計為 ' + r + '，不等於 0，確定仍要儲存？')) return;
+  R.push({ id: Date.now(), date: date, ses: ses, note: note, sc: sc, fe: fe });
+  await saveAll();
+  tip('✓ 紀錄已儲存');
+  document.getElementById('e-session').value = '';
+  document.getElementById('e-note').value = '';
+  clearInputs();
+}
+
+function getStats(list) {
+  var st = {};
+  P.forEach(function(p) { st[p] = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null }; });
+  list.forEach(function(r) {
+    Object.keys(r.sc).forEach(function(p) {
+      if (!st[p]) st[p] = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null };
+      var v = r.sc[p], fv = (r.fe && r.fe[p]) || 0;
+      st[p].sc += v; st[p].fe += fv; st[p].g++;
+      if (v > 0) st[p].w++;
+      if (st[p].best === null || v > st[p].best) st[p].best = v;
+      if (st[p].worst === null || v < st[p].worst) st[p].worst = v;
+    });
+  });
+  return st;
+}
+
+function renderRank() {
+  var from = document.getElementById('r-from').value;
+  var to = document.getElementById('r-to').value;
+  var list = R.filter(function(r) { return (!from || r.date >= from) && (!to || r.date <= to); });
+  var st = getStats(list);
+  var sorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
+    .sort(function(a, b) { return f2(b[1].sc - b[1].fe) - f2(a[1].sc - a[1].fe); });
+  var fees = list.reduce(function(a, r) { return a + Object.values(r.fe || {}).reduce(function(x, y) { return x + y; }, 0); }, 0);
+  var top = sorted[0]; var topNet = top ? f2(top[1].sc - top[1].fe) : 0;
+  document.getElementById('r-meta').innerHTML =
+    '<div class="mc"><div class="ml">比賽場次</div><div class="mv">' + list.length + '</div></div>' +
+    '<div class="mc"><div class="ml">總參賽費</div><div class="mv">' + f2(fees) + '</div></div>' +
+    '<div class="mc"><div class="ml">目前龍頭</div><div class="mv" style="font-size:15px">' + (top ? top[0] : '-') + '</div></div>' +
+    '<div class="mc"><div class="ml">龍頭淨值</div><div class="mv" style="font-size:16px;color:' + (topNet >= 0 ? 'var(--green)' : 'var(--red)') + '">' + (top ? fs(topNet) : '-') + '</div></div>';
+  var tb = document.getElementById('r-body');
+  if (!sorted.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">尚無紀錄</td></tr>'; }
+  else {
+    tb.innerHTML = sorted.map(function(e, i) {
+      var p = e[0], s = e[1]; var net = f2(s.sc - s.fe); var wr = Math.round(s.w / s.g * 100);
+      var pos = i < 3 ? '<span class="pos p' + (i + 1) + '">' + (i + 1) + '</span>' : '<span style="font-size:12px;color:var(--text2)">' + (i + 1) + '</span>';
+      return '<tr>' +
+        '<td>' + pos + '</td>' +
+        '<td style="font-weight:600">' + p + '</td>' +
+        '<td>' + s.g + '</td>' +
+        '<td><span class="' + (s.sc > 0 ? 'plus' : s.sc < 0 ? 'minus' : '') + '">' + fs(s.sc) + '</span></td>' +
+        '<td style="color:var(--red)">' + f2(s.fe) + '</td>' +
+        '<td><span class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '" style="font-size:14px">' + fs(net) + '</span></td>' +
+        '<td><span class="bw">' + (s.best >= 0 ? '+' : '') + s.best + '</span></td>' +
+        '<td><span class="bl">' + s.worst + '</span></td>' +
+        '<td><span class="' + (wr >= 50 ? 'bw' : 'bn') + '">' + s.w + '勝(' + wr + '%)</span></td></tr>';
+    }).join('');
+  }
+
+  // 自摸排行
+  var zimoSorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
+    .map(function(e) {
+      var p = e[0], s = e[1];
+      var zimoTotal = f2(s.fe / 50);
+      var zimoAvg = f2(zimoTotal / s.g);
+      return { p: p, g: s.g, fe: s.fe, zimoTotal: zimoTotal, zimoAvg: zimoAvg };
+    })
+    .sort(function(a, b) { return b.zimoAvg - a.zimoAvg; });
+
+  var ztb = document.getElementById('zimo-body');
+  if (!zimoSorted.length) { ztb.innerHTML = '<tr><td colspan="6" class="empty">尚無紀錄</td></tr>'; }
+  else {
+    ztb.innerHTML = zimoSorted.map(function(s, i) {
+      var pos = i < 3 ? '<span class="pos p' + (i + 1) + '">' + (i + 1) + '</span>' : '<span style="font-size:12px;color:var(--text2)">' + (i + 1) + '</span>';
+      return '<tr>' +
+        '<td>' + pos + '</td>' +
+        '<td style="font-weight:600">' + s.p + '</td>' +
+        '<td>' + s.g + ' 場</td>' +
+        '<td style="color:var(--red)">' + f2(s.fe) + '</td>' +
+        '<td><span class="bw">' + s.zimoTotal + ' 次</span></td>' +
+        '<td><span style="font-size:15px;font-weight:700;color:var(--amber)">' + s.zimoAvg + ' 次/場</span></td></tr>';
+    }).join('');
+  }
+}
+
+function buildRecFilter() {
+  var sel = document.getElementById('f-p');
+  sel.innerHTML = '<option value="">全部</option>' + P.map(function(p) { return '<option value="' + p + '">' + p + '</option>'; }).join('');
+}
+
+function getFiltered() {
+  var from = document.getElementById('f-from').value;
+  var to = document.getElementById('f-to').value;
+  var pl = document.getElementById('f-p').value;
+  function sesNum(s) { var m = (s||'').match(/(\d+)/); return m ? parseInt(m[1]) : 0; }
+  return R.filter(function(r) { return (!from || r.date >= from) && (!to || r.date <= to) && (!pl || pl in r.sc); })
+    .sort(function(a, b) { var d = b.date.localeCompare(a.date); return d !== 0 ? d : sesNum(b.ses) - sesNum(a.ses); });
+}
+
+function clearRecF() {
+  document.getElementById('f-from').value = '';
+  document.getElementById('f-to').value = '';
+  document.getElementById('f-p').value = '';
+  renderRec();
+}
+
+function renderRec() {
+  var list = getFiltered();
+  if (curView === 'sum') renderSum(list); else renderDet(list);
+}
+
+function renderSum(list) {
+  var from = document.getElementById('f-from').value; var to = document.getElementById('f-to').value;
+  var lbl = from && to ? from + ' ～ ' + to : from ? from + ' 之後' : to ? to + ' 之前' : '全部區間';
+  var fees = list.reduce(function(a, r) { return a + Object.values(r.fe || {}).reduce(function(x, y) { return x + y; }, 0); }, 0);
+  var st = getStats(list);
+  var sorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
+    .sort(function(a, b) { return f2(b[1].sc - b[1].fe) - f2(a[1].sc - a[1].fe); });
+  var html = '<div class="card" style="margin-bottom:14px">' +
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">' + lbl + '　共 <b>' + list.length + '</b> 場　總參賽費：<b>' + f2(fees) + '</b></div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px">' +
+    sorted.slice(0, 4).map(function(e, i) {
+      var net = f2(e[1].sc - e[1].fe); var m = ['🥇','🥈','🥉',''][i];
+      return '<div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">' + m + ' ' + e[0] + '</div>' +
+        '<div style="font-size:16px;font-weight:700" class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '">' + fs(net) + '</div></div>';
+    }).join('') + '</div></div>';
+  if (!sorted.length) { html += '<div class="empty">尚無符合的紀錄</div>'; }
+  else {
+    html += sorted.map(function(e, i) {
+      var p = e[0], s = e[1]; var net = f2(s.sc - s.fe); var wr = s.g ? Math.round(s.w / s.g * 100) : 0;
+      var pos = i < 3 ? '<span class="pos p' + (i + 1) + '">' + (i + 1) + '</span>' : '<span style="font-size:11px;color:var(--text2);font-weight:600">' + (i + 1) + '</span>';
+      return '<div class="scard"><div class="sh"><div style="display:flex;align-items:center;gap:8px">' + pos +
+        '<span style="font-size:14px;font-weight:600">' + p + '</span></div>' +
+        '<span style="font-size:20px;font-weight:700" class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '">' + fs(net) + '</span></div>' +
+        '<div class="sg">' +
+        '<div class="si"><div class="sl">輸贏合計</div><div class="sv2 ' + (s.sc > 0 ? 'plus' : s.sc < 0 ? 'minus' : '') + '">' + fs(s.sc) + '</div></div>' +
+        '<div class="si"><div class="sl">總參賽費</div><div class="sv2" style="color:var(--red)">' + f2(s.fe) + '</div></div>' +
+        '<div class="si"><div class="sl">出賽場次</div><div class="sv2">' + s.g + ' 場</div></div>' +
+        '<div class="si"><div class="sl">勝場率</div><div class="sv2">' + s.w + '勝(' + wr + '%)</div></div>' +
+        '<div class="si"><div class="sl">最佳單場</div><div class="sv2 plus">' + (s.best >= 0 ? '+' : '') + s.best + '</div></div>' +
+        '<div class="si"><div class="sl">最差單場</div><div class="sv2 minus">' + s.worst + '</div></div>' +
+        '</div></div>';
+    }).join('');
+  }
+  document.getElementById('v-sum').innerHTML = html;
+}
+
+function renderDet(list) {
+  var el = document.getElementById('v-det');
+  if (!list.length) { el.innerHTML = '<div class="empty">尚無符合的紀錄</div>'; return; }
+  el.innerHTML = list.map(function(r) {
+    var fe = r.fe || {};
+    var pcards = Object.keys(r.sc).map(function(p) {
+      var v = r.sc[p], fv = fe[p] || 0, nt = f2(v - fv);
+      return '<div class="det-p"><div class="det-pname">' + p + '</div>' +
+        '<div class="det-row"><span>輸贏</span><span class="' + (v > 0 ? 'plus' : v < 0 ? 'minus' : '') + '">' + fs(v) + '</span></div>' +
+        '<div class="det-row"><span>參賽費</span><span style="color:var(--red)">' + fv + '</span></div>' +
+        '<div class="det-net"><span>淨值</span><b class="' + (nt > 0 ? 'plus' : nt < 0 ? 'minus' : '') + '">' + fs(nt) + '</b></div></div>';
+    }).join('');
+    return '<div class="det-card"><div class="det-top">' +
+      '<div><span class="det-date">' + r.date + '</span><span class="det-ses">' + r.ses + '</span>' +
+      (r.note ? '<span style="font-size:11px;color:var(--text2);margin-left:6px">' + r.note + '</span>' : '') + '</div>' +
+      '<button onclick="openEditModal(' + r.id + ')" style="border:none;background:none;cursor:pointer;color:var(--amber);font-size:14px;padding:2px 6px" title="編輯">✏️</button>' +
+      '<button onclick="delR(' + r.id + ')" style="border:none;background:none;cursor:pointer;color:var(--red);font-size:16px;padding:2px 4px" title="刪除">🗑</button>' +
+      '</div><div class="det-players">' + pcards + '</div></div>';
+  }).join('');
+}
+
+async function delR(id) {
+  if (!confirm('確定刪除這筆紀錄？')) return;
+  R = R.filter(function(r) { return r.id !== id; });
+  await saveAll(); tip('已刪除'); renderRec();
+}
+
+function renderMgr() {
+  document.getElementById('p-list').innerHTML = P.map(function(p, i) {
+    return '<div class="pitem"><span class="pnum">' + (i + 1) + '</span>' +
+      '<input type="text" value="' + p + '" style="flex:1;max-width:180px" onchange="updP(' + i + ',this.value)">' +
+      '<button class="btn btn-danger" onclick="rmP(' + i + ')" style="padding:4px 12px;font-size:12px">移除</button></div>';
+  }).join('');
+}
+
+async function updP(i, v) { P[i] = v; await saveAll(); buildEntry(); }
+async function addP() {
+  var v = document.getElementById('p-new').value.trim();
+  if (!v) return;
+  P.push(v); document.getElementById('p-new').value = '';
+  await saveAll(); renderMgr(); buildEntry();
+}
+async function rmP(i) {
+  if (!confirm('確定移除「' + P[i] + '」？')) return;
+  P.splice(i, 1); await saveAll(); renderMgr(); buildEntry();
+}
+
+function exportBackup() {
+  var now = new Date();
+  var dateStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0');
+  var data = { players: P, records: R, exportedAt: now.toLocaleString('zh-TW') };
+  var json = JSON.stringify(data, null, 2);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '麻將賽事備份_' + dateStr + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  tip('✓ 備份已下載：麻將賽事備份_' + dateStr + '.json');
+}
+
+function exportExcel() {
+  var now = new Date();
+  var dateStr = now.getFullYear() + '-' +
+    String(now.getMonth()+1).padStart(2,'0') + '-' +
+    String(now.getDate()).padStart(2,'0');
+  function sn(s) { var m = (s||'').match(/(\d+)/); return m ? parseInt(m[1]) : 0; }
+  var sorted = R.slice().sort(function(a,b){ var d = a.date.localeCompare(b.date); return d !== 0 ? d : sn(a.ses) - sn(b.ses); });
+
+  var rows = [];
+  // 標題說明
+  rows.push(['柒樓麻將館 賽事紀錄', '', '', '', '', '', '']);
+  rows.push(['匯出時間：' + now.toLocaleString('zh-TW'), '', '', '', '', '', '']);
+  rows.push([]);
+
+  // 逐場明細
+  rows.push(['=== 逐場明細 ===', '', '', '', '', '', '']);
+  rows.push(['日期', '場次', '備註', '姓名', '輸贏', '參賽費', '淨值']);
+
+  sorted.forEach(function(r) {
+    var players = Object.keys(r.sc);
+    players.forEach(function(p, i) {
+      var sc = r.sc[p];
+      var fe = (r.fe && r.fe[p] !== undefined) ? r.fe[p] : 0;
+      var nt = f2(sc - fe);
+      rows.push([
+        i === 0 ? r.date : '',
+        i === 0 ? r.ses : '',
+        i === 0 ? (r.note || '') : '',
+        p,
+        sc,
+        fe,
+        nt
+      ]);
+    });
+    rows.push([]);
+  });
+
+  // 累計統計
+  rows.push(['=== 累計統計 ===', '', '', '', '', '', '']);
+  rows.push(['姓名', '出賽場次', '輸贏合計', '總參賽費', '實際淨值', '勝場次', '勝場率']);
+  var st = getStats(R);
+  var statRows = Object.entries(st).filter(function(e){ return e[1].g > 0; })
+    .sort(function(a,b){ return f2(b[1].sc - b[1].fe) - f2(a[1].sc - a[1].fe); });
+  statRows.forEach(function(e) {
+    var p = e[0], s = e[1];
+    var net = f2(s.sc - s.fe);
+    var wr = s.g ? Math.round(s.w / s.g * 100) : 0;
+    rows.push([p, s.g + '場', s.sc, s.fe, net, s.w + '勝', wr + '%']);
+  });
+
+  var csv = '﻿' + rows.map(function(row) {
+    return row.map(function(cell) {
+      var s = String(cell === null || cell === undefined ? '' : cell);
+      if (s.indexOf(',') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0) {
+        s = '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '柒樓麻將館_' + dateStr + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  tip('✓ Excel 檔案已下載');
+}
+
+// ── 選手資料 ──
+function getPlayerStats(name) {
+  var st = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null, recent: [] };
+  var sorted = R.slice().sort(function(a,b){ return b.date.localeCompare(a.date)||b.id-a.id; });
+  sorted.forEach(function(r) {
+    if (!(name in r.sc)) return;
+    var v = r.sc[name], fv = (r.fe && r.fe[name]) || 0;
+    st.sc += v; st.fe += fv; st.g++;
+    if (v > 0) st.w++;
+    if (st.best === null || v > st.best) st.best = v;
+    if (st.worst === null || v < st.worst) st.worst = v;
+    if (st.recent.length < 5) st.recent.push({ date: r.date, ses: r.ses, sc: v, fe: fv });
+  });
+  return st;
+}
+
+function getRankAmong(name) {
+  var all = P.map(function(p) {
+    var s = getPlayerStats(p);
+    return { p: p, net: f2(s.sc - s.fe), g: s.g };
+  }).filter(function(x){ return x.g > 0; })
+    .sort(function(a,b){ return b.net - a.net; });
+  var idx = all.findIndex(function(x){ return x.p === name; });
+  return idx >= 0 ? (idx + 1) : null;
+}
+
+function renderProfileGrid() {
+  var grid = document.getElementById('profile-grid');
+  grid.innerHTML = P.map(function(p) {
+    var st = getPlayerStats(p);
+    var net = f2(st.sc - st.fe);
+    var prof = PROFILES[p] || {};
+    var avatar = prof.avatar
+      ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+      : '<span style="font-size:32px">👤</span>';
+    var netColor = net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : 'var(--text2)';
+    var safeName = p.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    return '<div onclick="openProfile(this.dataset.p)" data-p="' + safeName + '" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;text-align:center;transition:all .15s" onmouseover="this.style.borderColor=\'var(--border2)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+      '<div style="width:64px;height:64px;border-radius:50%;background:var(--bg);border:2px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">' + avatar + '</div>' +
+      '<div style="font-size:14px;font-weight:700;margin-bottom:4px">' + p + '</div>' +
+      '<div style="font-size:12px;color:var(--text2);margin-bottom:6px">' + st.g + ' 場出賽</div>' +
+      '<div style="font-size:16px;font-weight:700;color:' + netColor + '">' + (net >= 0 ? '+' : '') + net + '</div>' +
+      '<div style="font-size:10px;color:var(--text2);margin-top:2px">實際淨值</div>' +
+      '</div>';
+  }).join('');
+}
+
+function openProfile(name) {
+  currentProfilePlayer = name;
+  var prof = PROFILES[name] || {};
+  var st = getPlayerStats(name);
+  var rank = getRankAmong(name);
+
+  var avatarEl = document.getElementById('pm-avatar');
+  avatarEl.innerHTML = prof.avatar
+    ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+    : '👤';
+
+  document.getElementById('pm-name').textContent = name;
+  var badge = document.getElementById('pm-rank-badge');
+  if (rank) {
+    var medals = ['🥇 第1名','🥈 第2名','🥉 第3名'];
+    badge.textContent = rank <= 3 ? medals[rank-1] : '第' + rank + '名';
+    badge.style.background = rank === 1 ? 'var(--amber-bg)' : rank === 2 ? '#f1efe8' : rank === 3 ? 'var(--red-bg)' : 'var(--bg)';
+    badge.style.color = rank === 1 ? 'var(--amber)' : rank === 2 ? '#555' : rank === 3 ? 'var(--red)' : 'var(--text2)';
+  } else {
+    badge.textContent = '尚無出賽紀錄';
+    badge.style.background = 'var(--bg)';
+    badge.style.color = 'var(--text2)';
+  }
+
+  document.getElementById('pm-bio').value = prof.bio || '';
+  document.getElementById('pm-upload-status').textContent = '';
+
+  var net = f2(st.sc - st.fe);
+  var wr = st.g ? Math.round(st.w / st.g * 100) : 0;
+  document.getElementById('pm-stats').innerHTML = [
+    { l: '出賽場次', v: st.g + ' 場', c: '' },
+    { l: '輸贏合計', v: fs(st.sc), c: st.sc > 0 ? 'var(--green)' : st.sc < 0 ? 'var(--red)' : '' },
+    { l: '實際淨值', v: fs(net), c: net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '' },
+    { l: '總參賽費', v: f2(st.fe), c: 'var(--red)' },
+    { l: '勝場率', v: st.w + '勝(' + wr + '%)', c: wr >= 50 ? 'var(--green)' : '' },
+    { l: '最佳單場', v: st.best !== null ? (st.best >= 0 ? '+' : '') + st.best : '-', c: 'var(--green)' }
+  ].map(function(x) {
+    return '<div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
+      '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">' + x.l + '</div>' +
+      '<div style="font-size:13px;font-weight:700' + (x.c ? ';color:' + x.c : '') + '">' + x.v + '</div></div>';
+  }).join('');
+
+  if (st.recent.length === 0) {
+    document.getElementById('pm-recent').innerHTML = '<div style="color:var(--text2);font-size:12px;padding:10px 0">尚無比賽紀錄</div>';
+  } else {
+    document.getElementById('pm-recent').innerHTML = st.recent.map(function(r) {
+      var nt = f2(r.sc - r.fe);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<div><div style="font-size:12px;font-weight:500">' + r.date + ' ' + r.ses + '</div>' +
+        '<div style="font-size:11px;color:var(--text2)">參賽費 ' + r.fe + '</div></div>' +
+        '<div style="text-align:right">' +
+        '<div style="font-size:13px;font-weight:700;color:' + (r.sc > 0 ? 'var(--green)' : r.sc < 0 ? 'var(--red)' : 'var(--text2)') + '">' + fs(r.sc) + '</div>' +
+        '<div style="font-size:11px;color:' + (nt > 0 ? 'var(--green)' : nt < 0 ? 'var(--red)' : 'var(--text2)') + '">淨 ' + fs(nt) + '</div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  document.getElementById('profile-modal').style.display = 'flex';
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').style.display = 'none';
+  currentProfilePlayer = null;
+}
+
+document.getElementById('profile-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeProfileModal();
+});
+
+async function uploadAvatar(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var statusEl = document.getElementById('pm-upload-status');
+  statusEl.textContent = '上傳中...';
+  statusEl.style.color = 'var(--text2)';
+
+  var formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', UPLOAD_PRESET);
+  formData.append('folder', 'mahjong_avatars');
+
+  try {
+    var res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+      method: 'POST',
+      body: formData
+    });
+    var data = await res.json();
+    if (data.secure_url) {
+      var url = data.secure_url;
+      document.getElementById('pm-avatar').innerHTML = '<img src="' + url + '" style="width:100%;height:100%;object-fit:cover">';
+      if (!PROFILES[currentProfilePlayer]) PROFILES[currentProfilePlayer] = {};
+      PROFILES[currentProfilePlayer].avatar = url;
+      statusEl.textContent = '✓ 上傳成功';
+      statusEl.style.color = 'var(--green)';
+    } else {
+      throw new Error('上傳失敗');
+    }
+  } catch(e) {
+    statusEl.textContent = '✗ 上傳失敗，請重試';
+    statusEl.style.color = 'var(--red)';
+  }
+}
+
+async function saveProfile() {
+  if (!currentProfilePlayer) return;
+  if (!PROFILES[currentProfilePlayer]) PROFILES[currentProfilePlayer] = {};
+  PROFILES[currentProfilePlayer].bio = document.getElementById('pm-bio').value;
+  await saveAll();
+  tip('✓ 個人資料已儲存');
+  renderProfileGrid();
+  buildEntry();
+}
+
+var RULES = [
+  { tai: 1, color: '#e8a020', bg: '#fef9ee', items: [
+    { name: '門清', desc: '胡牌時，沒有吃牌、碰牌、明積。' },
+    { name: '自摸', desc: '胡牌的牌由自己摸進。' },
+    { name: '搶槓', desc: '聽牌時，因別人加槓而加槓的那張牌，恰巧是可以胡的牌。' },
+    { name: '獨聽', desc: '邊張、中洞、單吊。' },
+    { name: '槓上開花', desc: '因摸到花牌、暗槓或加槓而補牌，補牌後恰巧胡牌。' },
+    { name: '海底撈月', desc: '摸牌盡最後一張，而自摸者多計一台。因摸到花牌或加槓造成其結果為最後一張牌時，亦以海底撈月計之。' },
+    { name: '半求',  desc: '手牌只剩一張單吊自摸胡，其餘全吃或碰，1台。' }
+  ]},
+  { tai: 2, color: '#2d8a4e', bg: '#edf7f1', items: [
+    { name: '平胡', desc: '胡牌由五組順子及一個對子組成，胡他人牌非自摸。牌中無字、花牌、呈兩面聽牌狀態。釣將不算。' },
+    { name: '全求', desc: '手牌只剩一張牌單吊胡牌，而其餘全吃或碰，且胡他人牌（非自摸）。' },
+    { name: '三暗刻', desc: '手牌裡，有三組刻子（包括暗槓）。' }
+  ]},
+  { tai: 4, color: '#1a6aaa', bg: '#eaf3fc', items: [
+    { name: '地聽', desc: '在無人吃碰情況下，配牌後打出第一張牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
+    { name: '碰碰胡', desc: '胡牌全部由刻子再加一個對子組成。' },
+    { name: '小三元', desc: '胡牌者中、發、白其中二組是刻子一組是對子。' },
+    { name: '混一色', desc: '胡牌者只有一種數牌，及字牌混合所組成。' }
+  ]},
+  { tai: 5, color: '#7b3ab0', bg: '#f5eefb', items: [
+    { name: '四暗刻', desc: '胡牌時，手牌裡有四組刻子。' }
+  ]},
+  { tai: 8, color: '#c0392b', bg: '#fdf0ef', items: [
+    { name: '天聽', desc: '配牌即聽牌，且叫聽後不能換牌。門清、不求不能算，可以加計自摸。' },
+    { name: '五暗刻', desc: '胡牌時，手牌裡有五組刻子。' },
+    { name: '大三元', desc: '胡牌時，有中、發、白三組刻子。' },
+    { name: '小四喜', desc: '胡牌者完成東、南、西、北其中三組刻子，一組對子。' },
+    { name: '清一色', desc: '整副牌為同一花色所組成，由筒、條或萬所組成的牌。' },
+  ]},
+  { tai: 16, color: '#8b0000', bg: '#fdf0f0', items: [
+    { name: '天胡', desc: '莊家取完牌後，已經胡牌，稱為天胡。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
+    { name: '人胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，胡他人牌，算清16台，不得加計門清、天地聽。其餘另計。' },
+    { name: '地胡', desc: '配牌後，第一巡內，無發生吃、碰、明積之情況，開家於此巡內第一次摸牌即自摸胡，算清16台，不得加計自摸、門清、不求、天地聽。其餘另計。' },
+    { name: '大四喜', desc: '手牌(含已露牌)有風牌之4種刻(槓)子，不分明暗，算清16台，不得加計門風、圈風台。其餘另計。' }
+  ]}
+];
+
+// ── 台數計算 ──
+var calcHand = [];
+var calcExp  = [];
+var calcTarget = 'hand';
+var HAND_MAX = 17;
+
+var CALC_SUITS = [
+  { name:'萬', color:'#c0392b', tiles:[11,12,13,14,15,16,17,18,19] },
+  { name:'條', color:'#2d6a2d', tiles:[21,22,23,24,25,26,27,28,29] },
+  { name:'筒', color:'#1a6aaa', tiles:[31,32,33,34,35,36,37,38,39] },
+  { name:'字', color:'#7b3ab0', tiles:[41,42,43,44,45,46,47] }
+];
+
+var TILE_LABEL = {
+  11:'1萬',12:'2萬',13:'3萬',14:'4萬',15:'5萬',16:'6萬',17:'7萬',18:'8萬',19:'9萬',
+  21:'1條',22:'2條',23:'3條',24:'4條',25:'5條',26:'6條',27:'7條',28:'8條',29:'9條',
+  31:'1筒',32:'2筒',33:'3筒',34:'4筒',35:'5筒',36:'6筒',37:'7筒',38:'8筒',39:'9筒',
+  41:'東',42:'南',43:'西',44:'北',45:'中',46:'發',47:'白'
+};
+
+function tileCol(t) {
+  if (t === 45) return '#c0392b';
+  if (t === 46) return '#2d6a2d';
+  if (t === 47) return '#6b6960';
+  if (t >= 41)  return '#1a1a18';
+  var m = { 1:'#c0392b', 2:'#2d6a2d', 3:'#1a6aaa' };
+  return m[Math.floor(t / 10)];
+}
+
+var CTX_DEFS = [
+  { id:'zm',   name:'自摸',    tai:1,  color:'#2d8a4e', desc:'胡牌的牌由自己摸進。' },
+  { id:'dt',   name:'獨聽',    tai:1,  color:'#2d8a4e', desc:'邊張、中洞、單吊。' },
+  { id:'qg',   name:'搶槓',    tai:1,  color:'#2d8a4e', desc:'聽牌時，因別人加槓，那張牌恰好可以胡。' },
+  { id:'gskh', name:'槓上開花', tai:1, color:'#2d8a4e', desc:'因摸花牌、暗槓或加槓補牌後恰巧胡牌。' },
+  { id:'hdly', name:'海底撈月', tai:1, color:'#2d8a4e', desc:'摸牌盡最後一張而自摸。' },
+  { id:'ph',   name:'平胡',    tai:2,  color:'#1a6aaa', desc:'五組順子加一個對子，胡他人牌非自摸，無字花牌，兩面聽牌。釣將不算。' },
+  { id:'bq',   name:'半求',    tai:1,  color:'#2d8a4e', desc:'手牌只剩一張單吊自摸胡，其餘全吃或碰。' },
+  { id:'qq',   name:'全求',    tai:2,  color:'#1a6aaa', desc:'手牌只剩一張單吊胡他人牌，其餘全吃或碰。' },
+  { id:'dit',  name:'地聽',    tai:4,  color:'#7b3ab0', desc:'無人吃碰情況下，打出第一張牌即聽牌，門清不求不能算，可加計自摸。' },
+  { id:'tt',   name:'天聽',    tai:8,  color:'#c0392b', desc:'配牌即聽牌，門清不求不能算，可加計自摸。' },
+  { id:'tgh',  name:'天胡',    tai:16, color:'#8b0000', desc:'莊家取完牌後已胡牌。不得加計門自摸、門清、不求、天地聽。其餘另計。' },
+  { id:'rgh',  name:'人胡',    tai:16, color:'#8b0000', desc:'第一巡內無吃碰明積胡他人牌，算清16台。不得加計門清、天地聽。其餘另計。' },
+  { id:'dgh',  name:'地胡',    tai:16, color:'#8b0000', desc:'第一巡內無吃碰明積，第一次摸牌即自摸胡，算清16台。不得加計自摸、門清、不求、天地聽。其餘另計。' }
+];
+
+var CTX_EXCL = {
+  'tgh': ['zm','tt','dit'],
+  'rgh': ['tt','dit'],
+  'dgh': ['zm','tt','dit'],
+  'ph':  ['zm'],
+  'tt':  ['dit'],
+  'dit': ['tt'],
+  'qq':  ['zm','bq'],
+  'bq':  ['qq']
+};
+
+var calcRendered = false;
+
+function renderCalc() {
+  if (!calcRendered) {
+    calcRendered = true;
+    document.getElementById('calc-picker').innerHTML = CALC_SUITS.map(function(s) {
+      return '<div style="margin-bottom:8px">' +
+        '<div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">' + s.name + '</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:3px">' +
+        s.tiles.map(function(t) {
+          return '<button onclick="addCalcTile(' + t + ')" style="min-width:36px;padding:6px 4px;border-radius:6px;border:1.5px solid ' + s.color + '33;background:var(--surface);cursor:pointer;font-size:12px;font-weight:700;color:' + s.color + '" onmouseover="this.style.background=\'' + s.color + '15\'" onmouseout="this.style.background=\'var(--surface)\'">' + TILE_LABEL[t] + '</button>';
+        }).join('') + '</div></div>';
+    }).join('');
+    document.getElementById('calc-ctx').innerHTML = CTX_DEFS.map(function(c) {
+      return '<div class="calc-item" id="cw-' + c.id + '">' +
+        '<input type="checkbox" id="cctx-' + c.id + '" class="calc-cb" style="accent-color:' + c.color + '" onchange="ctxChange(\'' + c.id + '\')">' +
+        '<label for="cctx-' + c.id + '" class="calc-name">' + c.name + '</label>' +
+        '<span class="calc-tai-badge" style="background:' + c.color + '18;color:' + c.color + '">+' + c.tai + '台</span>' +
+        '<button class="calc-info-btn" onclick="event.stopPropagation();showCalcInfo(\'' + c.id + '\')">？</button>' +
+        '</div>';
+    }).join('');
+  }
+  calcAnalyze();
+}
+
+function setCalcTarget(t) {
+  calcTarget = t;
+  var hint   = document.getElementById('calc-hint');
+  var hSect  = document.getElementById('calc-sect-hand');
+  var eSect  = document.getElementById('calc-sect-exp');
+  var hLabel = document.getElementById('calc-hand-label');
+  var eLabel = document.getElementById('calc-exp-label');
+  if (t === 'hand') {
+    if (hSect)  { hSect.style.borderColor = 'var(--text)';    hSect.style.background = 'var(--surface)'; }
+    if (eSect)  { eSect.style.borderColor = 'var(--border)';  eSect.style.background = 'var(--bg)'; }
+    if (hLabel) { hLabel.textContent = '▶ 手牌（暗牌）'; hLabel.style.color = 'var(--text)'; }
+    if (eLabel) { eLabel.textContent = '露牌（吃/碰）';   eLabel.style.color = 'var(--text2)'; }
+    if (hint)   hint.textContent = '點擊牌面加入手牌（暗牌）';
+  } else {
+    if (hSect)  { hSect.style.borderColor = 'var(--border)';  hSect.style.background = 'var(--bg)'; }
+    if (eSect)  { eSect.style.borderColor = 'var(--text)';    eSect.style.background = 'var(--surface)'; }
+    if (hLabel) { hLabel.textContent = '手牌（暗牌）';       hLabel.style.color = 'var(--text2)'; }
+    if (eLabel) { eLabel.textContent = '▶ 露牌（吃/碰）';   eLabel.style.color = 'var(--text)'; }
+    if (hint)   hint.textContent = '點擊牌面加入露牌（吃/碰），每組3張';
+  }
+}
+
+function addCalcTile(t) {
+  if (calcHand.length + calcExp.length >= HAND_MAX) { tip('總共最多 17 張'); return; }
+  if (calcTarget === 'hand') {
+    calcHand.push(t);
+    refreshCalcHand();
+  } else {
+    calcExp.push(t);
+    refreshCalcExp();
+  }
+  updateCalcCounts();
+  calcAnalyze();
+}
+
+function removeCalcTile(i) {
+  calcHand.splice(i, 1);
+  refreshCalcHand();
+  updateCalcCounts();
+  calcAnalyze();
+}
+
+function removeCalcExp(i) {
+  calcExp.splice(i, 1);
+  refreshCalcExp();
+  updateCalcCounts();
+  calcAnalyze();
+}
+
+function tileChips(arr, removeFn) {
+  if (!arr.length) return '<span style="color:var(--text2);font-size:12px">尚未輸入</span>';
+  var indexed = arr.map(function(t, i) { return { t: t, i: i }; })
+    .sort(function(a, b) { return a.t - b.t; });
+  return indexed.map(function(x) {
+    var col = tileCol(x.t);
+    return '<span onclick="' + removeFn + '(' + x.i + ')" title="點擊移除" style="display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px;border-radius:6px;background:var(--surface);border:1.5px solid ' + col + '55;font-size:12px;font-weight:700;color:' + col + ';cursor:pointer" onmouseover="this.style.borderColor=\'' + col + '\'" onmouseout="this.style.borderColor=\'' + col + '55\'">' + TILE_LABEL[x.t] + '</span>';
+  }).join('');
+}
+
+function refreshCalcHand() {
+  document.getElementById('calc-hand').innerHTML = tileChips(calcHand, 'removeCalcTile');
+}
+
+function refreshCalcExp() {
+  document.getElementById('calc-exp').innerHTML = tileChips(calcExp, 'removeCalcExp');
+}
+
+function updateCalcCounts() {
+  var maxHand = HAND_MAX - calcExp.length;
+  var hEl = document.getElementById('calc-hand-cnt');
+  var eEl = document.getElementById('calc-exp-cnt');
+  if (hEl) {
+    hEl.textContent = calcHand.length + ' / ' + maxHand + ' 張';
+    hEl.style.color = calcHand.length === maxHand ? 'var(--green)' : 'var(--text)';
+  }
+  if (eEl) {
+    var expOk = calcExp.length > 0 && calcExp.length % 3 === 0;
+    eEl.textContent = calcExp.length + ' 張' + (calcExp.length > 0 && calcExp.length % 3 !== 0 ? ' ⚠需為3的倍數' : '');
+    eEl.style.color = calcExp.length > 0 && calcExp.length % 3 !== 0 ? 'var(--red)' : 'var(--text)';
+  }
+}
+
+function detectPatterns() {
+  var total = calcHand.length + calcExp.length;
+  if (total !== HAND_MAX) return [];
+  if (calcExp.length % 3 !== 0) return [];
+
+  // Count all tiles (hand + exposed)
+  var allTiles = calcHand.concat(calcExp);
+  var ca = {};
+  allTiles.forEach(function(t) { ca[t] = (ca[t] || 0) + 1; });
+
+  // Count hand tiles only
+  var ch = {};
+  calcHand.forEach(function(t) { ch[t] = (ch[t] || 0) + 1; });
+
+  var found = [];
+
+  // 門清：無露牌，且天胡/人胡/地胡/天聽/地聽 均未勾選
+  var suppressMq = ['tgh','rgh','dgh','tt','dit'].some(function(id) {
+    var cb = document.getElementById('cctx-' + id);
+    return cb && cb.checked;
+  });
+  if (calcExp.length === 0 && !suppressMq) {
+    found.push({ name:'門清', tai:1, color:'#2d8a4e' });
+  }
+
+  // 清一色 / 混一色（全部牌）
+  var numSuits = {}, hasHonor = false;
+  allTiles.forEach(function(t) {
+    if (t >= 41) hasHonor = true;
+    else numSuits[Math.floor(t / 10)] = 1;
+  });
+  var suitCnt = Object.keys(numSuits).length;
+  if (!hasHonor && suitCnt === 1) {
+    found.push({ name:'清一色', tai:8, color:'#c0392b' });
+  } else if (suitCnt === 1 && hasHonor) {
+    found.push({ name:'混一色', tai:4, color:'#7b3ab0' });
+  }
+
+  // 大四喜 / 小四喜（全部牌）
+  var wc = [ca[41]||0, ca[42]||0, ca[43]||0, ca[44]||0];
+  var wT = wc.filter(function(v) { return v >= 3; }).length;
+  var wP = wc.filter(function(v) { return v === 2; }).length;
+  if (wT === 4) {
+    found.push({ name:'大四喜', tai:16, color:'#8b0000' });
+  } else if (wT === 3 && wP === 1) {
+    found.push({ name:'小四喜', tai:8, color:'#c0392b' });
+  }
+
+  // 大三元 / 小三元（全部牌）
+  var dc = [ca[45]||0, ca[46]||0, ca[47]||0];
+  var dT = dc.filter(function(v) { return v >= 3; }).length;
+  var dP = dc.filter(function(v) { return v === 2; }).length;
+  if (dT === 3) {
+    found.push({ name:'大三元', tai:8, color:'#c0392b' });
+  } else if (dT === 2 && dP === 1) {
+    found.push({ name:'小三元', tai:4, color:'#7b3ab0' });
+  }
+
+  // 字牌刻子（東南西北中發白）：不分明暗，各1台
+  var honorCol = {41:'#1a1a18',42:'#1a1a18',43:'#1a1a18',44:'#1a1a18',45:'#c0392b',46:'#2d6a2d',47:'#6b6960'};
+  [41,42,43,44,45,46,47].forEach(function(t) {
+    if (ca[t] >= 3) found.push({ name:TILE_LABEL[t]+'刻', tai:1, color:honorCol[t] });
+  });
+
+  // 暗刻數：只計算手牌（暗牌）裡同一張牌出現3張以上的組數
+  var ankeCount = 0;
+  Object.keys(ch).forEach(function(tk) {
+    ankeCount += Math.floor((ch[Number(tk)] || 0) / 3);
+  });
+
+  // 碰碰胡：所有牌（手牌+露牌）移除一個對子後均可被3整除
+  var allKeys = Object.keys(ca).map(Number);
+  var isPP = false;
+  for (var i = 0; i < allKeys.length; i++) {
+    var pt = allKeys[i];
+    if ((ca[pt] || 0) < 2) continue;
+    var ok = true;
+    for (var j = 0; j < allKeys.length; j++) {
+      var qt = allKeys[j];
+      if (((ca[qt] || 0) - (qt === pt ? 2 : 0)) % 3 !== 0) { ok = false; break; }
+    }
+    if (ok) { isPP = true; break; }
+  }
+  if (isPP) {
+    found.push({ name:'碰碰胡', tai:4, color:'#1a6aaa' });
+    // 碰碰胡時用手牌長度精確計算暗刻組數（手牌 = 1對 + n組暗刻）
+    var concealedTrip = (calcHand.length - 2) / 3;
+    if (concealedTrip >= 5) found.push({ name:'五暗刻', tai:8, color:'#c0392b' });
+    else if (concealedTrip >= 4) found.push({ name:'四暗刻', tai:5, color:'#7b3ab0' });
+    else if (concealedTrip >= 3) found.push({ name:'三暗刻', tai:2, color:'#1a6aaa' });
+  } else if (ankeCount >= 3) {
+    // 非碰碰胡：計算手牌裡的刻子（露牌刻子不算）
+    if (ankeCount >= 5) found.push({ name:'五暗刻', tai:8, color:'#c0392b' });
+    else if (ankeCount >= 4) found.push({ name:'四暗刻', tai:5, color:'#7b3ab0' });
+    else found.push({ name:'三暗刻', tai:2, color:'#1a6aaa' });
+  }
+
+  return found;
+}
+
+function ctxChange(id) {
+  var cb = document.getElementById('cctx-' + id);
+  if (cb.checked) {
+    (CTX_EXCL[id] || []).forEach(function(eid) {
+      var ecb = document.getElementById('cctx-' + eid);
+      var row = document.getElementById('cw-' + eid);
+      if (ecb) { ecb.checked = false; ecb.disabled = true; }
+      if (row) row.style.opacity = '0.4';
+    });
+  } else {
+    recomputeCtxLocks();
+  }
+  calcAnalyze();
+}
+
+function recomputeCtxLocks() {
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    var row = document.getElementById('cw-' + c.id);
+    if (cb) cb.disabled = false;
+    if (row) row.style.opacity = '1';
+  });
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    if (cb && cb.checked) {
+      (CTX_EXCL[c.id] || []).forEach(function(eid) {
+        var ecb = document.getElementById('cctx-' + eid);
+        var row = document.getElementById('cw-' + eid);
+        if (ecb) ecb.disabled = true;
+        if (row) row.style.opacity = '0.4';
+      });
+    }
+  });
+}
+
+function calcAnalyze() {
+  recomputeCtxLocks();
+  var autoPats = detectPatterns();
+  var autoTai = autoPats.reduce(function(s, p) { return s + p.tai; }, 0);
+  var ctxTai = 0;
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    if (cb && cb.checked && !cb.disabled) ctxTai += c.tai;
+  });
+  var total = autoTai + ctxTai;
+  var totalEl = document.getElementById('calc-total');
+  if (!totalEl) return;
+  totalEl.textContent = total;
+  totalEl.style.color = total === 0 ? 'var(--text2)' :
+    total <= 2 ? 'var(--text2)' :
+    total <= 5 ? '#1a6aaa' :
+    total <= 8 ? 'var(--amber)' : 'var(--red)';
+  var listEl = document.getElementById('calc-auto-list');
+  if (!listEl) return;
+  var ready = (calcHand.length + calcExp.length === HAND_MAX) && (calcExp.length % 3 === 0);
+  if (!autoPats.length && ready) {
+    listEl.innerHTML = '<span style="font-size:12px;color:var(--text2)">未偵測到特殊牌型</span>';
+  } else {
+    listEl.innerHTML = autoPats.map(function(p) {
+      return '<span style="display:inline-flex;align-items:center;gap:3px;padding:3px 10px;border-radius:999px;background:' + p.color + '15;color:' + p.color + ';font-size:12px;font-weight:600">✦ ' + p.name + ' <span style="opacity:.75">+' + p.tai + '</span></span>';
+    }).join('');
+  }
+}
+
+function clearCalcAll() {
+  calcHand = []; calcExp = [];
+  refreshCalcHand(); refreshCalcExp();
+  updateCalcCounts();
+  setCalcTarget('hand');
+  CTX_DEFS.forEach(function(c) {
+    var cb = document.getElementById('cctx-' + c.id);
+    var row = document.getElementById('cw-' + c.id);
+    if (cb) { cb.checked = false; cb.disabled = false; }
+    if (row) row.style.opacity = '1';
+  });
+  calcAnalyze();
+}
+
+function showCalcInfo(id) {
+  var found = null;
+  for (var i = 0; i < CTX_DEFS.length; i++) {
+    if (CTX_DEFS[i].id === id) { found = CTX_DEFS[i]; break; }
+  }
+  if (!found) return;
+  document.getElementById('calc-modal-tai').textContent = '+' + found.tai + ' 台';
+  document.getElementById('calc-modal-tai').style.color = found.color;
+  document.getElementById('calc-modal-name').textContent = found.name;
+  document.getElementById('calc-modal-desc').textContent = found.desc;
+  document.getElementById('calc-modal').style.display = 'flex';
+}
+
+function closeCalcModal() {
+  document.getElementById('calc-modal').style.display = 'none';
+}
+
+var currentModal = null;
+
+function renderRules() {
+  var html = '';
+  for (var g = 0; g < RULES.length; g++) {
+    var group = RULES[g];
+    var btns = '';
+    for (var i = 0; i < group.items.length; i++) {
+      btns += '<button data-g="' + g + '" data-i="' + i + '" onclick="showModal(this.dataset.g, this.dataset.i)" ' +
+        'style="padding:8px 14px;border-radius:8px;border:1px solid ' + group.color + '44;' +
+        'background:var(--surface);cursor:pointer;font-size:13px;font-weight:500;color:var(--text);transition:all .15s">' +
+        group.items[i].name + '</button>';
+    }
+    html += '<div style="margin-bottom:22px">' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+      '<span style="background:' + group.color + ';color:#fff;font-size:14px;font-weight:700;padding:4px 16px;border-radius:999px">' + group.tai + ' 台</span>' +
+      '<div style="flex:1;height:1px;background:' + group.color + '44"></div></div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px">' + btns + '</div></div>';
+  }
+  document.getElementById('rules-content').innerHTML = html;
+}
+
+function showModal(gIdx, iIdx) {
+  var group = RULES[parseInt(gIdx)];
+  var item = group.items[parseInt(iIdx)];
+  document.getElementById('modal-tai').textContent = group.tai + ' 台';
+  document.getElementById('modal-tai').style.color = group.color;
+  document.getElementById('modal-name').textContent = item.name;
+  document.getElementById('modal-desc').textContent = item.desc;
+  var modal = document.getElementById('rule-modal');
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('rule-modal').style.display = 'none';
+}
+
+document.getElementById('rule-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal();
+});
+
+// ── 編輯紀錄 ──────────────────────────────────────────
+function openEditModal(id) {
+  var rec = R.find(function(r) { return r.id === id; });
+  if (!rec) return;
+  editId = id;
+  editRows = Object.keys(rec.sc).map(function(p) {
+    var sc = rec.sc[p];
+    var fe = (rec.fe && rec.fe[p] !== undefined) ? rec.fe[p] : 0;
+    return { name: p, win: sc > 0 ? sc : 0, lose: sc < 0 ? -sc : 0, fee: fe };
+  });
+  document.getElementById('edit-date').value = rec.date;
+  document.getElementById('edit-session').value = rec.ses;
+  document.getElementById('edit-note').value = rec.note || '';
+  renderEditPlayers();
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editId = null; editRows = [];
+}
+
+function collectEditValues() {
+  editRows.forEach(function(row, i) {
+    var n = document.getElementById('edit-name-' + i);
+    var w = document.getElementById('edit-win-' + i);
+    var l = document.getElementById('edit-lose-' + i);
+    var f = document.getElementById('edit-fee-' + i);
+    if (n) row.name = n.value;
+    if (w) row.win  = parseFloat(w.value) || 0;
+    if (l) row.lose = parseFloat(l.value) || 0;
+    if (f) row.fee  = parseFloat(f.value) || 0;
+  });
+}
+
+function renderEditPlayers() {
+  var html = editRows.map(function(row, i) {
+    var optsHtml = P.map(function(p) {
+      return '<option value="' + p + '"' + (p === row.name ? ' selected' : '') + '>' + p + '</option>';
+    }).join('');
+    var sc = f2(row.win - row.lose);
+    var nt = f2(sc - row.fee);
+    var ntColor = nt > 0 ? 'var(--green)' : nt < 0 ? 'var(--red)' : 'var(--text2)';
+    return '<div style="background:var(--bg);border-radius:8px;padding:10px;margin-bottom:8px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
+        '<select id="edit-name-' + i + '" onchange="collectEditValues();renderEditPlayers()" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">' + optsHtml + '</select>' +
+        '<button onclick="editRemoveRow(' + i + ')" style="border:1px solid #f0c0c0;background:var(--red-bg);color:var(--red);border-radius:var(--radius);padding:6px 10px;cursor:pointer;font-size:12px;white-space:nowrap">✕ 移除</button>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">' +
+        '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">贏（正數）</div><input id="edit-win-' + i + '" type="number" step="any" min="0" value="' + row.win + '" oninput="refreshEditSum()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
+        '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">輸（正數）</div><input id="edit-lose-' + i + '" type="number" step="any" min="0" value="' + row.lose + '" oninput="refreshEditSum()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
+        '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">參賽費</div><input id="edit-fee-' + i + '" type="number" step="any" min="0" value="' + row.fee + '" oninput="refreshEditSum()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
+        '<div style="text-align:right;padding-bottom:2px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">淨值</div><div style="font-size:14px;font-weight:700;color:' + ntColor + '">' + (nt > 0 ? '+' : '') + nt + '</div></div>' +
+      '</div></div>';
+  }).join('');
+  document.getElementById('edit-players-area').innerHTML = html;
+  refreshEditSum();
+}
+
+function refreshEditSum() {
+  var sum = 0;
+  editRows.forEach(function(_, i) {
+    var w = document.getElementById('edit-win-' + i);
+    var l = document.getElementById('edit-lose-' + i);
+    sum += (parseFloat(w && w.value) || 0) - (parseFloat(l && l.value) || 0);
+  });
+  var r = f2(sum);
+  var el = document.getElementById('edit-sum-bar');
+  if (!el) return;
+  el.innerHTML = '<span style="font-size:12px;font-weight:500">合計：<b style="color:' + (r === 0 ? 'var(--green)' : 'var(--red)') + '">' + (r > 0 ? '+' : '') + r + '</b> ' +
+    (r === 0 ? '<span style="color:var(--green)">✓ 正確</span>' : '<span style="color:var(--red)">⚠ 應為 0</span>') + '</span>';
+}
+
+function editAddPlayer() {
+  collectEditValues();
+  var used = editRows.map(function(r) { return r.name; });
+  var avail = P.filter(function(p) { return !used.includes(p); });
+  if (!avail.length) { tip('所有參賽者都已加入'); return; }
+  editRows.push({ name: avail[0], win: 0, lose: 0, fee: 0 });
+  renderEditPlayers();
+}
+
+function editRemoveRow(i) {
+  collectEditValues();
+  if (editRows.length <= 2) { tip('至少需要2位參賽者'); return; }
+  editRows.splice(i, 1);
+  renderEditPlayers();
+}
+
+async function saveEdit() {
+  collectEditValues();
+  var date = document.getElementById('edit-date').value;
+  var ses  = document.getElementById('edit-session').value;
+  var note = document.getElementById('edit-note').value.trim();
+  if (!date) { alert('請選擇日期'); return; }
+  if (!ses)  { alert('請選擇場次'); return; }
+  if (editRows.length < 2) { alert('至少需要2位參賽者'); return; }
+  var names = editRows.map(function(r) { return r.name; });
+  var seen = {}, dupes = [];
+  names.forEach(function(n) { seen[n] ? dupes.push(n) : (seen[n] = true); });
+  if (dupes.length) { alert('有重複的參賽者：' + dupes.join(', ')); return; }
+  var sum = editRows.reduce(function(s, r) { return s + r.win - r.lose; }, 0);
+  var sr = f2(sum);
+  if (sr !== 0 && !confirm('輸贏合計為 ' + sr + '，不等於 0，確定仍要儲存？')) return;
+  var sc = {}, fe = {};
+  editRows.forEach(function(r) { sc[r.name] = f2(r.win - r.lose); fe[r.name] = r.fee; });
+  var idx = R.findIndex(function(r) { return r.id === editId; });
+  if (idx === -1) { alert('找不到紀錄'); return; }
+  R[idx] = { id: R[idx].id, date: date, ses: ses, note: note, sc: sc, fe: fe };
+  await saveAll();
+  tip('✓ 修改已儲存');
+  closeEditModal();
+  renderRec();
+}
+
+document.getElementById('calc-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeCalcModal();
+});
+
+document.getElementById('e-date').value = new Date().toISOString().split('T')[0];
+load();
+
+var _nav = document.querySelector('.nav');
+var _navX0 = 0, _navY0 = 0, _navL0 = 0, _navDrag = false, _navH = false;
+_nav.addEventListener('touchstart', function(e) {
+  _navX0 = e.touches[0].clientX;
+  _navY0 = e.touches[0].clientY;
+  _navL0 = _nav.scrollLeft;
+  _navDrag = true; _navH = false;
+}, { passive: true });
+_nav.addEventListener('touchmove', function(e) {
+  if (!_navDrag) return;
+  var dx = _navX0 - e.touches[0].clientX;
+  var dy = Math.abs(e.touches[0].clientY - _navY0);
+  if (!_navH && Math.abs(dx) > dy && Math.abs(dx) > 3) _navH = true;
+  if (_navH) { e.preventDefault(); _nav.scrollLeft = _navL0 + dx; }
+}, { passive: false });
+_nav.addEventListener('touchend', function() { _navDrag = false; _navH = false; }, { passive: true });
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      reg.addEventListener('updatefound', function() {
+        var nw = reg.installing;
+        nw.addEventListener('statechange', function() {
+          if (nw.state === 'activated' && navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(function() {});
+  });
+}
+</script>
+</body>
+</html>
