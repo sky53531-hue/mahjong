@@ -206,6 +206,24 @@
 
   <!-- 新增紀錄 -->
   <div id="pg-entry" class="pg on">
+
+    <!-- 冠軍橫幅 -->
+    <div id="champion-banner" style="display:none;background:linear-gradient(135deg,#1a1200,#2d2000);border:1px solid var(--amber);border-radius:16px;padding:16px 20px;margin-bottom:12px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-10px;right:8px;font-size:90px;opacity:0.07;line-height:1;pointer-events:none">🏆</div>
+      <div style="font-size:10px;font-weight:600;color:var(--amber);letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">目前排行榜冠軍</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="cb-avatar" style="width:52px;height:52px;border-radius:50%;background:var(--bg);border:2px solid var(--amber);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">👤</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:20px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="cb-name"></div>
+          <div style="font-size:12px;color:var(--amber);margin-top:2px" id="cb-net"></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:26px;font-weight:800;color:var(--amber);line-height:1" id="cb-days"></div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">霸榜天數</div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">比賽資訊</div>
       <div class="form-row">
@@ -575,7 +593,81 @@ function switchView(v, el) {
   renderRec();
 }
 
+function getChampionInfo() {
+  var activePlayers = P.filter(function(p) {
+    return R.some(function(r) { return p in r.sc; });
+  });
+  if (activePlayers.length === 0) return null;
+
+  var totals = {};
+  activePlayers.forEach(function(p) { totals[p] = { sc: 0, fe: 0 }; });
+  R.forEach(function(r) {
+    Object.keys(r.sc).forEach(function(p) {
+      if (!totals[p]) return;
+      totals[p].sc += r.sc[p];
+      totals[p].fe += (r.fe && r.fe[p]) || 0;
+    });
+  });
+
+  var ranked = activePlayers.slice().sort(function(a, b) {
+    return f2(totals[b].sc - totals[b].fe) - f2(totals[a].sc - totals[a].fe);
+  });
+  var champion = ranked[0];
+  var champNet = f2(totals[champion].sc - totals[champion].fe);
+
+  var sorted = R.slice().sort(function(a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
+  var running = {};
+  var gameLeaders = [];
+  sorted.forEach(function(r) {
+    Object.keys(r.sc).forEach(function(p) {
+      if (!running[p]) running[p] = { sc: 0, fe: 0 };
+      running[p].sc += r.sc[p];
+      running[p].fe += (r.fe && r.fe[p]) || 0;
+    });
+    var vp = Object.keys(running).filter(function(p) { return activePlayers.indexOf(p) >= 0; });
+    var leader = vp.sort(function(a, b) {
+      return f2(running[b].sc - running[b].fe) - f2(running[a].sc - running[a].fe);
+    })[0] || null;
+    gameLeaders.push({ date: r.date, leader: leader });
+  });
+
+  var lastNonLeaderIdx = -1;
+  for (var i = gameLeaders.length - 1; i >= 0; i--) {
+    if (gameLeaders[i].leader !== champion) { lastNonLeaderIdx = i; break; }
+  }
+
+  var reignStart;
+  if (lastNonLeaderIdx === -1) {
+    reignStart = sorted[0].date;
+  } else if (lastNonLeaderIdx + 1 < sorted.length) {
+    reignStart = sorted[lastNonLeaderIdx + 1].date;
+  } else {
+    reignStart = new Date().toISOString().slice(0, 10);
+  }
+
+  var parts = reignStart.split('-');
+  var startD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  var todayD = new Date(); todayD.setHours(0, 0, 0, 0);
+  var days = Math.floor((todayD - startD) / 86400000);
+  return { name: champion, net: champNet, days: days };
+}
+
+function renderChampionBanner() {
+  var banner = document.getElementById('champion-banner');
+  var info = getChampionInfo();
+  if (!info) { banner.style.display = 'none'; return; }
+  var prof = PROFILES[info.name] || {};
+  document.getElementById('cb-avatar').innerHTML = prof.avatar
+    ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+    : '👤';
+  document.getElementById('cb-name').textContent = info.name;
+  document.getElementById('cb-net').textContent = '實際淨值 ' + (info.net >= 0 ? '+' : '') + info.net;
+  document.getElementById('cb-days').textContent = info.days + ' 天';
+  banner.style.display = 'block';
+}
+
 function buildEntry() {
+  renderChampionBanner();
   var g = document.getElementById('e-grid');
   g.innerHTML = P.map(function(p) {
     var id = eid(p);
