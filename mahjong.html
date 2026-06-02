@@ -1083,7 +1083,7 @@ function openProfile(name) {
   // 月份統計
   var monthMap = {};
   st.recent.forEach(function(r) {
-    var ym = r.date.substring(0, 6); // "115/05"
+    var ym = r.date.substring(0, 7); // "2026-05"
     if (!monthMap[ym]) monthMap[ym] = { g: 0, w: 0, sc: 0, fe: 0 };
     monthMap[ym].g++;
     if (r.sc > 0) monthMap[ym].w++;
