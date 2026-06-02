@@ -1101,15 +1101,17 @@ function openProfile(name) {
     monthEl.innerHTML = '<div style="color:var(--text2);font-size:12px;padding:6px 0">尚無紀錄</div>';
   } else {
     monthEl.innerHTML = '<div style="font-size:11px">' +
-      '<div style="display:grid;grid-template-columns:3fr 1fr 1fr 2fr 2fr;gap:4px;padding:4px 6px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)">' +
-        '<div>月份</div><div style="text-align:center">場次</div><div style="text-align:center">勝場</div><div style="text-align:right">輸贏</div><div style="text-align:right">淨值</div></div>' +
+      '<div style="display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr 2fr 2fr;gap:4px;padding:4px 6px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border)">' +
+        '<div>月份</div><div style="text-align:center">場次</div><div style="text-align:center">勝場</div><div style="text-align:center">勝率</div><div style="text-align:right">輸贏</div><div style="text-align:right">淨值</div></div>' +
       months.map(function(ym) {
         var m = monthMap[ym];
         var mnet = f2(m.sc - m.fe);
-        return '<div style="display:grid;grid-template-columns:3fr 1fr 1fr 2fr 2fr;gap:4px;padding:6px 6px;border-bottom:1px solid var(--border)">' +
+        var mwr = Math.round(m.w / m.g * 100);
+        return '<div style="display:grid;grid-template-columns:3fr 1fr 1fr 1.5fr 2fr 2fr;gap:4px;padding:6px 6px;border-bottom:1px solid var(--border)">' +
           '<div>' + ym + '</div>' +
           '<div style="text-align:center">' + m.g + '</div>' +
           '<div style="text-align:center">' + m.w + '</div>' +
+          '<div style="text-align:center;color:' + (mwr >= 50 ? 'var(--green)' : 'var(--red)') + '">' + mwr + '%</div>' +
           '<div style="text-align:right;color:' + (m.sc > 0 ? 'var(--green)' : m.sc < 0 ? 'var(--red)' : 'var(--text2)') + '">' + fs(m.sc) + '</div>' +
           '<div style="text-align:right;color:' + (mnet > 0 ? 'var(--green)' : mnet < 0 ? 'var(--red)' : 'var(--text2)') + '">' + fs(mnet) + '</div>' +
           '</div>';
