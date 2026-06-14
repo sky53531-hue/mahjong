@@ -225,6 +225,23 @@
       </div>
     </div>
 
+    <!-- 連莊冠軍橫幅 -->
+    <div id="lz-banner" style="display:none;background:linear-gradient(135deg,rgba(100,180,255,0.22),rgba(60,120,220,0.15));border:1px solid rgba(100,160,255,0.6);border-radius:16px;padding:16px 20px;margin-bottom:12px;position:relative;overflow:hidden">
+      <div style="position:absolute;top:-10px;right:8px;font-size:90px;opacity:0.09;line-height:1;pointer-events:none">🀄</div>
+      <div style="font-size:10px;font-weight:600;color:#4a9eff;letter-spacing:1px;margin-bottom:10px;text-transform:uppercase">🀄 連莊次數紀錄保持人</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="lz-avatar" style="width:56px;height:56px;border-radius:50%;background:var(--bg);border:2px solid #4a9eff;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0">👤</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:20px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="lz-name"></div>
+          <div style="font-size:12px;color:#4a9eff;margin-top:2px" id="lz-record"></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:26px;font-weight:800;color:#4a9eff;line-height:1" id="lz-days"></div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">霸榜天數</div>
+        </div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">比賽資訊</div>
       <div class="form-row">
@@ -683,8 +700,39 @@ function renderChampionBanner() {
   banner.style.display = 'block';
 }
 
+function getLianZhuangChampion() {
+  var maxLz = 0, champName = null, champDate = null;
+  var sorted = R.slice().sort(function(a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
+  sorted.forEach(function(r) {
+    if (!r.lz) return;
+    Object.keys(r.lz).forEach(function(p) {
+      var v = r.lz[p] || 0;
+      if (v >= maxLz && v > 0) { maxLz = v; champName = p; champDate = r.date; }
+    });
+  });
+  if (!champName) return null;
+  var parts = champDate.split('-');
+  var startD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  var todayD = new Date(); todayD.setHours(0, 0, 0, 0);
+  var days = Math.floor((todayD - startD) / 86400000);
+  return { name: champName, maxLz: maxLz, days: days };
+}
+function renderLianZhuangBanner() {
+  var banner = document.getElementById('lz-banner');
+  var info = getLianZhuangChampion();
+  if (!info) { banner.style.display = 'none'; return; }
+  var prof = PROFILES[info.name] || {};
+  document.getElementById('lz-avatar').innerHTML = prof.avatar
+    ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
+    : '👤';
+  document.getElementById('lz-name').textContent = info.name;
+  document.getElementById('lz-record').textContent = '最高連莊次數：' + info.maxLz + ' 次';
+  document.getElementById('lz-days').textContent = info.days + ' 天';
+  banner.style.display = 'block';
+}
 function buildEntry() {
   renderChampionBanner();
+  renderLianZhuangBanner();
   var g = document.getElementById('e-grid');
   g.innerHTML = P.map(function(p) {
     var id = eid(p);
@@ -699,6 +747,7 @@ function buildEntry() {
       '<div class="irow"><span class="lbl">贏</span><input type="number" step="any" min="0" id="win-' + id + '" oninput="updateAll()" placeholder="0"></div>' +
       '<div class="irow"><span class="lbl">輸</span><input type="number" step="any" min="0" id="lose-' + id + '" oninput="updateAll()" placeholder="0"></div>' +
       '<div class="irow"><span class="lbl">參賽費</span><input type="number" step="any" min="0" id="fe-' + id + '" oninput="updateAll()"></div>' +
+      '<div class="irow"><span class="lbl">連莊</span><input type="number" step="1" min="0" id="lz-' + id + '" placeholder="0"></div>' +
       '<div class="netl">淨值：<b id="nt-' + id + '" style="color:var(--text2)">-</b></div></div>';
   }).join('');
   updateAll();
@@ -745,8 +794,9 @@ function clearInputs() {
     var win = document.getElementById('win-' + id);
     var lose = document.getElementById('lose-' + id);
     var fe = document.getElementById('fe-' + id);
+    var lz = document.getElementById('lz-' + id);
     var nt = document.getElementById('nt-' + id);
-    if (win) win.value = ''; if (lose) lose.value = ''; if (fe) fe.value = '';
+    if (win) win.value = ''; if (lose) lose.value = ''; if (fe) fe.value = ''; if (lz) lz.value = '';
     if (nt) { nt.textContent = '-'; nt.style.color = 'var(--text2)'; }
   });
   document.getElementById('sum-val').textContent = '0';
@@ -762,21 +812,24 @@ async function doSave() {
   var note = document.getElementById('e-note').value.trim();
   if (!date) { alert('請選擇日期'); return; }
   if (!ses) { alert('請填寫場次'); return; }
-  var sc = {}, fe = {}, cnt = 0, sum = 0;
+  var sc = {}, fe = {}, lz = {}, cnt = 0, sum = 0;
   P.forEach(function(p) {
     var id = eid(p);
     var win = readNum(document.getElementById('win-' + id));
     var lose = readNum(document.getElementById('lose-' + id));
     var fv = readNum(document.getElementById('fe-' + id));
+    var lzv = readNum(document.getElementById('lz-' + id));
     if (win !== null || lose !== null) {
       var sv = (win || 0) - (lose || 0);
-      sc[p] = sv; fe[p] = fv !== null ? fv : 0; cnt++; sum += sv;
+      sc[p] = sv; fe[p] = fv !== null ? fv : 0;
+      if (lzv !== null && lzv > 0) lz[p] = lzv;
+      cnt++; sum += sv;
     }
   });
   if (cnt < 2) { alert('請至少輸入2位參賽者的輸贏值'); return; }
   var r = f2(sum);
   if (r !== 0 && !confirm('輸贏合計為 ' + r + '，不等於 0，確定仍要儲存？')) return;
-  R.push({ id: Date.now(), date: date, ses: ses, note: note, sc: sc, fe: fe, feeRate: feeRate });
+  R.push({ id: Date.now(), date: date, ses: ses, note: note, sc: sc, fe: fe, feeRate: feeRate, lz: lz });
   await saveAll();
   tip('✓ 紀錄已儲存');
   document.getElementById('e-session').value = '';
@@ -1064,12 +1117,14 @@ function exportExcel() {
 // ── 選手資料 ──
 function getPlayerStats(name) {
   var st = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null, recent: [],
-             curStreak: 0, maxWinStreak: 0, maxLoseStreak: 0 };
+             curStreak: 0, maxWinStreak: 0, maxLoseStreak: 0, maxLz: 0 };
   var sorted = R.slice().sort(function(a,b){ return b.date.localeCompare(a.date)||b.id-a.id; });
   var tmpWin = 0, tmpLose = 0;
   sorted.forEach(function(r) {
     if (!(name in r.sc)) return;
     var v = r.sc[name], fv = (r.fe && r.fe[name]) || 0;
+    var lzv = (r.lz && r.lz[name]) || 0;
+    if (lzv > st.maxLz) st.maxLz = lzv;
     st.sc += v; st.fe += fv; st.g++;
     if (v > 0) {
       st.w++; tmpWin++; tmpLose = 0;
@@ -1163,7 +1218,8 @@ function openProfile(name) {
     { l: '勝場率', v: st.w + '勝 ' + wr + '%', c: wr >= 50 ? 'var(--green)' : 'var(--red)' },
     { l: '場均淨值', v: (avg >= 0 ? '+' : '') + avg, c: avg > 0 ? 'var(--green)' : avg < 0 ? 'var(--red)' : '' },
     { l: '最佳單場', v: st.best !== null ? (st.best >= 0 ? '+' : '') + st.best : '-', c: 'var(--green)' },
-    { l: '最差單場', v: st.worst !== null ? (st.worst >= 0 ? '+' : '') + st.worst : '-', c: 'var(--red)' }
+    { l: '最差單場', v: st.worst !== null ? (st.worst >= 0 ? '+' : '') + st.worst : '-', c: 'var(--red)' },
+    { l: '最高連莊次數', v: st.maxLz > 0 ? st.maxLz + ' 次' : '-', c: st.maxLz > 0 ? '#4a9eff' : '' }
   ].map(function(x) {
     return '<div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
       '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">' + x.l + '</div>' +
@@ -1752,7 +1808,8 @@ function openEditModal(id) {
   editRows = Object.keys(rec.sc).map(function(p) {
     var sc = rec.sc[p];
     var fe = (rec.fe && rec.fe[p] !== undefined) ? rec.fe[p] : 0;
-    return { name: p, win: sc > 0 ? sc : 0, lose: sc < 0 ? -sc : 0, fee: fe };
+    var lz = (rec.lz && rec.lz[p]) || 0;
+    return { name: p, win: sc > 0 ? sc : 0, lose: sc < 0 ? -sc : 0, fee: fe, lz: lz };
   });
   document.getElementById('edit-date').value = rec.date;
   document.getElementById('edit-session').value = rec.ses;
@@ -1773,9 +1830,11 @@ function collectEditValues() {
     var w = document.getElementById('edit-win-' + i);
     var l = document.getElementById('edit-lose-' + i);
     var f = document.getElementById('edit-fee-' + i);
+    var z = document.getElementById('edit-lz-' + i);
     if (n) row.name = n.value;
     if (w) row.win  = parseFloat(w.value) || 0;
     if (l) row.lose = parseFloat(l.value) || 0;
+    if (z) row.lz   = parseInt(z.value) || 0;
     if (f) row.fee  = parseFloat(f.value) || 0;
   });
 }
@@ -1793,10 +1852,11 @@ function renderEditPlayers() {
         '<select id="edit-name-' + i + '" onchange="collectEditValues();renderEditPlayers()" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">' + optsHtml + '</select>' +
         '<button onclick="editRemoveRow(' + i + ')" style="border:1px solid #f0c0c0;background:var(--red-bg);color:var(--red);border-radius:var(--radius);padding:6px 10px;cursor:pointer;font-size:12px;white-space:nowrap">✕ 移除</button>' +
       '</div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">' +
         '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">贏（正數）</div><input id="edit-win-' + i + '" type="number" step="any" min="0" value="' + row.win + '" oninput="refreshEditSum()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
         '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">輸（正數）</div><input id="edit-lose-' + i + '" type="number" step="any" min="0" value="' + row.lose + '" oninput="refreshEditSum()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
         '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">參賽費</div><input id="edit-fee-' + i + '" type="number" step="any" min="0" value="' + row.fee + '" oninput="refreshEditSum()" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
+        '<div><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">連莊</div><input id="edit-lz-' + i + '" type="number" step="1" min="0" value="' + (row.lz || 0) + '" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;text-align:right;background:var(--surface);color:var(--text)"></div>' +
         '<div style="text-align:right;padding-bottom:2px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px;font-weight:500">淨值</div><div style="font-size:14px;font-weight:700;color:' + ntColor + '">' + (nt > 0 ? '+' : '') + nt + '</div></div>' +
       '</div></div>';
   }).join('');
@@ -1850,11 +1910,11 @@ async function saveEdit() {
   var sum = editRows.reduce(function(s, r) { return s + r.win - r.lose; }, 0);
   var sr = f2(sum);
   if (sr !== 0 && !confirm('輸贏合計為 ' + sr + '，不等於 0，確定仍要儲存？')) return;
-  var sc = {}, fe = {};
-  editRows.forEach(function(r) { sc[r.name] = f2(r.win - r.lose); fe[r.name] = r.fee; });
+  var sc = {}, fe = {}, lz = {};
+  editRows.forEach(function(r) { sc[r.name] = f2(r.win - r.lose); fe[r.name] = r.fee; if (r.lz > 0) lz[r.name] = r.lz; });
   var idx = R.findIndex(function(r) { return r.id === editId; });
   if (idx === -1) { alert('找不到紀錄'); return; }
-  R[idx] = { id: R[idx].id, date: date, ses: ses, note: note, sc: sc, fe: fe, feeRate: feeRate };
+  R[idx] = { id: R[idx].id, date: date, ses: ses, note: note, sc: sc, fe: fe, feeRate: feeRate, lz: lz };
   await saveAll();
   tip('✓ 修改已儲存');
   closeEditModal();
