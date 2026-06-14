@@ -230,6 +230,7 @@
       <div class="form-row">
         <div class="fg"><label>日期</label><input type="date" id="e-date"></div>
         <div class="fg"><label>場次</label><select id="e-session"><option value="">請選擇場次</option><option>第1場</option><option>第2場</option><option>第3場</option><option>第4場</option><option>第5場</option><option>第6場</option><option>第7場</option><option>第8場</option><option>第9場</option><option>第10場</option></select></div>
+        <div class="fg"><label>底台</label><select id="e-feeRate"><option value="50">50（一般）</option><option value="100">100（加大）</option></select></div>
         <div class="fg"><label>備註（選填）</label><input type="text" id="e-note"></div>
       </div>
       <div class="section-hdr">
@@ -278,7 +279,7 @@
     </div>
 
     <div style="font-size:14px;font-weight:600;margin:20px 0 10px">🀄 場均自摸排行榜</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">計算方式：參賽費 ÷ 50 = 自摸次數，自摸次數 ÷ 出賽場次 = 場均自摸</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">計算方式：各場參賽費 ÷ 底台（50 或 100）= 自摸次數，自摸次數 ÷ 出賽場次 = 場均自摸</div>
     <div class="card">
       <div class="tbl-wrap">
         <table>
@@ -462,7 +463,7 @@
   <div style="background:var(--surface);border-radius:16px;padding:20px;max-width:560px;width:100%;position:relative;margin:auto">
     <button onclick="closeEditModal()" style="position:absolute;top:14px;right:14px;border:none;background:none;font-size:22px;cursor:pointer;color:var(--text2)">✕</button>
     <div style="font-size:16px;font-weight:700;margin-bottom:16px">✏️ 編輯紀錄</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">
       <div>
         <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">日期</label>
         <input type="date" id="edit-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">
@@ -473,6 +474,13 @@
           <option>第1場</option><option>第2場</option><option>第3場</option><option>第4場</option>
           <option>第5場</option><option>第6場</option><option>第7場</option><option>第8場</option>
           <option>第9場</option><option>第10場</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.4px">底台</label>
+        <select id="edit-feeRate" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text);background:var(--surface)">
+          <option value="50">50（一般）</option>
+          <option value="100">100（加大）</option>
         </select>
       </div>
       <div>
@@ -750,6 +758,7 @@ function clearInputs() {
 async function doSave() {
   var date = document.getElementById('e-date').value;
   var ses = document.getElementById('e-session').value.trim();
+  var feeRate = parseInt(document.getElementById('e-feeRate').value) || 50;
   var note = document.getElementById('e-note').value.trim();
   if (!date) { alert('請選擇日期'); return; }
   if (!ses) { alert('請填寫場次'); return; }
@@ -767,7 +776,7 @@ async function doSave() {
   if (cnt < 2) { alert('請至少輸入2位參賽者的輸贏值'); return; }
   var r = f2(sum);
   if (r !== 0 && !confirm('輸贏合計為 ' + r + '，不等於 0，確定仍要儲存？')) return;
-  R.push({ id: Date.now(), date: date, ses: ses, note: note, sc: sc, fe: fe });
+  R.push({ id: Date.now(), date: date, ses: ses, note: note, sc: sc, fe: fe, feeRate: feeRate });
   await saveAll();
   tip('✓ 紀錄已儲存');
   document.getElementById('e-session').value = '';
@@ -777,12 +786,13 @@ async function doSave() {
 
 function getStats(list) {
   var st = {};
-  P.forEach(function(p) { st[p] = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null }; });
+  P.forEach(function(p) { st[p] = { sc: 0, fe: 0, zimo: 0, g: 0, w: 0, best: null, worst: null }; });
   list.forEach(function(r) {
+    var rate = r.feeRate || 50;
     Object.keys(r.sc).forEach(function(p) {
-      if (!st[p]) st[p] = { sc: 0, fe: 0, g: 0, w: 0, best: null, worst: null };
+      if (!st[p]) st[p] = { sc: 0, fe: 0, zimo: 0, g: 0, w: 0, best: null, worst: null };
       var v = r.sc[p], fv = (r.fe && r.fe[p]) || 0;
-      st[p].sc += v; st[p].fe += fv; st[p].g++;
+      st[p].sc += v; st[p].fe += fv; st[p].zimo += fv / rate; st[p].g++;
       if (v > 0) st[p].w++;
       if (st[p].best === null || v > st[p].best) st[p].best = v;
       if (st[p].worst === null || v < st[p].worst) st[p].worst = v;
@@ -828,7 +838,7 @@ function renderRank() {
   var zimoSorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
     .map(function(e) {
       var p = e[0], s = e[1];
-      var zimoTotal = f2(s.fe / 50);
+      var zimoTotal = f2(s.zimo);
       var zimoAvg = f2(zimoTotal / s.g);
       return { p: p, g: s.g, fe: s.fe, zimoTotal: zimoTotal, zimoAvg: zimoAvg };
     })
@@ -1746,6 +1756,7 @@ function openEditModal(id) {
   });
   document.getElementById('edit-date').value = rec.date;
   document.getElementById('edit-session').value = rec.ses;
+  document.getElementById('edit-feeRate').value = String(rec.feeRate || 50);
   document.getElementById('edit-note').value = rec.note || '';
   renderEditPlayers();
   document.getElementById('edit-modal').style.display = 'flex';
@@ -1827,6 +1838,7 @@ async function saveEdit() {
   collectEditValues();
   var date = document.getElementById('edit-date').value;
   var ses  = document.getElementById('edit-session').value;
+  var feeRate = parseInt(document.getElementById('edit-feeRate').value) || 50;
   var note = document.getElementById('edit-note').value.trim();
   if (!date) { alert('請選擇日期'); return; }
   if (!ses)  { alert('請選擇場次'); return; }
@@ -1842,7 +1854,7 @@ async function saveEdit() {
   editRows.forEach(function(r) { sc[r.name] = f2(r.win - r.lose); fe[r.name] = r.fee; });
   var idx = R.findIndex(function(r) { return r.id === editId; });
   if (idx === -1) { alert('找不到紀錄'); return; }
-  R[idx] = { id: R[idx].id, date: date, ses: ses, note: note, sc: sc, fe: fe };
+  R[idx] = { id: R[idx].id, date: date, ses: ses, note: note, sc: sc, fe: fe, feeRate: feeRate };
   await saveAll();
   tip('✓ 修改已儲存');
   closeEditModal();
