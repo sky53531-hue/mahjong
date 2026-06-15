@@ -370,6 +370,18 @@
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">月份統計</div>
         <div id="pm-monthly" style="margin-bottom:16px"></div>
 
+        <!-- 累積贏輸分析 -->
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">累積贏輸分析</div>
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <input type="date" id="pr-from" onchange="renderProfileRange()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;background:var(--bg);color:var(--text);flex:1;min-width:120px">
+            <span style="color:var(--text2);font-size:12px">至</span>
+            <input type="date" id="pr-to" onchange="renderProfileRange()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;background:var(--bg);color:var(--text);flex:1;min-width:120px">
+            <button onclick="resetProfileRange()" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text2);cursor:pointer;white-space:nowrap">全部</button>
+          </div>
+          <div id="pm-range-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
+        </div>
+
         <!-- 全部紀錄 -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">全部出賽紀錄</div>
@@ -1302,7 +1314,51 @@ function openProfile(name) {
     }).join('');
   }
 
+  document.getElementById('pr-from').value = '';
+  document.getElementById('pr-to').value = '';
+  renderProfileRange();
+
   document.getElementById('profile-modal').style.display = 'flex';
+}
+
+function renderProfileRange() {
+  var name = currentProfilePlayer;
+  if (!name) return;
+  var st = getPlayerStats(name);
+  var from = document.getElementById('pr-from').value;
+  var to = document.getElementById('pr-to').value;
+
+  var list = st.recent.filter(function(r) {
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
+    return true;
+  });
+
+  var totalWin = 0, totalLose = 0, totalFee = 0, games = 0;
+  list.forEach(function(r) {
+    games++;
+    totalFee += r.fe;
+    if (r.sc > 0) totalWin += r.sc;
+    else if (r.sc < 0) totalLose += Math.abs(r.sc);
+  });
+  var net = totalWin - totalLose - totalFee;
+
+  document.getElementById('pm-range-stats').innerHTML = [
+    { l: '統計場次', v: games + ' 場', c: '' },
+    { l: '累積贏金額', v: totalWin > 0 ? '+' + f2(totalWin) : '0', c: totalWin > 0 ? 'var(--green)' : '' },
+    { l: '累積輸金額', v: totalLose > 0 ? '-' + f2(totalLose) : '0', c: totalLose > 0 ? 'var(--red)' : '' },
+    { l: '實際淨值', v: (net >= 0 ? '+' : '') + f2(net), c: net > 0 ? 'var(--green)' : net < 0 ? 'var(--red)' : '' }
+  ].map(function(x) {
+    return '<div style="background:var(--bg);border-radius:8px;padding:10px;text-align:center">' +
+      '<div style="font-size:10px;color:var(--text2);margin-bottom:3px">' + x.l + '</div>' +
+      '<div style="font-size:13px;font-weight:700' + (x.c ? ';color:' + x.c : '') + '">' + x.v + '</div></div>';
+  }).join('');
+}
+
+function resetProfileRange() {
+  document.getElementById('pr-from').value = '';
+  document.getElementById('pr-to').value = '';
+  renderProfileRange();
 }
 
 function closeProfileModal() {
