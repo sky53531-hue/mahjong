@@ -1067,10 +1067,11 @@ function renderSum(list) {
   var lbl = from && to ? from + ' ～ ' + to : from ? from + ' 之後' : to ? to + ' 之前' : '全部區間';
   var fees = list.reduce(function(a, r) { return a + Object.values(r.fe || {}).reduce(function(x, y) { return x + y; }, 0); }, 0);
   var st = getStats(list);
+  var totalZimo = f2(Object.values(st).reduce(function(a, s) { return a + s.zimo; }, 0));
   var sorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
     .sort(function(a, b) { return f2(b[1].sc - b[1].fe) - f2(a[1].sc - a[1].fe); });
   var html = '<div class="card" style="margin-bottom:14px">' +
-    '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">' + lbl + '　共 <b>' + list.length + '</b> 場　總參賽費：<b>' + f2(fees) + '</b></div>' +
+    '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">' + lbl + '　共 <b>' + list.length + '</b> 場　總參賽費：<b>' + f2(fees) + '</b>　自摸次數：<b>' + totalZimo + '</b></div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px">' +
     sorted.slice(0, 4).map(function(e, i) {
       var net = f2(e[1].sc - e[1].fe); var m = ['🥇','🥈','🥉',''][i];
