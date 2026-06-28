@@ -693,23 +693,22 @@ function getChampionInfo() {
   });
 
   var ranked = activePlayers.slice().sort(function(a, b) {
-    return f2(totals[b].sc - totals[b].fe) - f2(totals[a].sc - totals[a].fe);
+    return f2(totals[b].sc) - f2(totals[a].sc);
   });
   var champion = ranked[0];
-  var champNet = f2(totals[champion].sc - totals[champion].fe);
+  var champSc = f2(totals[champion].sc);
 
   var sorted = R.slice().sort(function(a, b) { return a.date.localeCompare(b.date) || a.id - b.id; });
   var running = {};
   var gameLeaders = [];
   sorted.forEach(function(r) {
     Object.keys(r.sc).forEach(function(p) {
-      if (!running[p]) running[p] = { sc: 0, fe: 0 };
+      if (!running[p]) running[p] = { sc: 0 };
       running[p].sc += r.sc[p];
-      running[p].fe += (r.fe && r.fe[p]) || 0;
     });
     var vp = Object.keys(running).filter(function(p) { return activePlayers.indexOf(p) >= 0; });
     var leader = vp.sort(function(a, b) {
-      return f2(running[b].sc - running[b].fe) - f2(running[a].sc - running[a].fe);
+      return f2(running[b].sc) - f2(running[a].sc);
     })[0] || null;
     gameLeaders.push({ date: r.date, leader: leader });
   });
@@ -732,7 +731,7 @@ function getChampionInfo() {
   var startD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   var todayD = new Date(); todayD.setHours(0, 0, 0, 0);
   var days = Math.floor((todayD - startD) / 86400000);
-  return { name: champion, net: champNet, days: days };
+  return { name: champion, net: champSc, days: days };
 }
 
 function renderChampionBanner() {
@@ -744,7 +743,7 @@ function renderChampionBanner() {
     ? '<img src="' + prof.avatar + '" style="width:100%;height:100%;object-fit:cover">'
     : '👤';
   document.getElementById('cb-name').textContent = info.name;
-  document.getElementById('cb-net').textContent = '實際淨值 ' + (info.net >= 0 ? '+' : '') + info.net;
+  document.getElementById('cb-net').textContent = '輸贏合計 ' + (info.net >= 0 ? '+' : '') + info.net;
   document.getElementById('cb-days').textContent = info.days + ' 天';
   var bioEl = document.getElementById('cb-bio');
   var bio = prof.bio ? prof.bio.trim() : '';
