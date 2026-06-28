@@ -185,6 +185,7 @@
     <button onclick="exportExcel()" style="padding:5px 12px;border-radius:8px;border:1px solid #2d6a2d;background:#eaf3de;cursor:pointer;font-size:12px;font-weight:500;color:#2d6a2d">
       📊 匯出Excel
     </button>
+    <button onclick="refreshData()" id="refresh-btn" style="padding:5px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-size:14px;color:var(--text2)" title="重新整理資料">🔄</button>
     <div class="sync-badge">
       <div class="sync-dot spin" id="sync-dot"></div>
       <span id="sync-label">連線中...</span>
@@ -647,6 +648,18 @@ async function load() {
     tip('⚠ 無法連線至資料庫');
   }
   buildEntry();
+}
+
+async function refreshData() {
+  await load();
+  var on = document.querySelector('.pg.on');
+  if (on) {
+    var id = on.id.replace('pg-', '');
+    if (id === 'rec') renderRec();
+    else if (id === 'rank') renderRank();
+    else if (id === 'profile') renderProfileList();
+  }
+  tip('✓ 資料已更新');
 }
 
 async function saveAll() {
