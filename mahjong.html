@@ -609,7 +609,20 @@ async function saveAll() {
   }
 }
 
+function hasUnsavedEntryData() {
+  if (document.getElementById('e-session').value) return true;
+  if ((document.getElementById('e-note').value || '').trim()) return true;
+  var inputs = document.querySelectorAll('#e-grid input[type="number"]');
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].value !== '') return true;
+  }
+  return false;
+}
+
 function goTab(id, el) {
+  if (id !== 'entry' && document.getElementById('pg-entry').classList.contains('on') && hasUnsavedEntryData()) {
+    if (!confirm('有尚未儲存的資料，確定要離開？')) return;
+  }
   document.querySelectorAll('.pg').forEach(function(x) { x.classList.remove('on'); });
   document.querySelectorAll('.nav-btn').forEach(function(x) { x.classList.remove('on'); });
   document.getElementById('pg-' + id).classList.add('on');
