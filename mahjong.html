@@ -1104,7 +1104,7 @@ function setQ(q, fromId, toId, cb) {
 
 // ===== 即時對戰 =====
 var LIVE = { active: false, date: '', ses: '', feeRate: 50, players: ['','','',''], scores: [0,0,0,0], fees: [0,0,0,0], hands: [] };
-var lvWinner = -1, lvLoser = -1, lvType = 'discard';
+var lvWinner = -1, lvLoser = -1, lvType = 'discard', lvEditIdx = -1, lvInitAmount = '', lvInitFee = '';
 
 function initLivePage() {
   if (!LIVE.active) {
@@ -1168,25 +1168,59 @@ function renderLiveHands() {
     return;
   }
   var rows = LIVE.hands.slice().reverse().map(function(h, ri) {
-    var isLast = ri === 0;
+    var realIdx = LIVE.hands.length - 1 - ri;
     var desc = h.type === 'selfDraw'
       ? LIVE.players[h.winner] + ' 自摸　每人 ' + h.amount + (h.fee ? '　台費 ' + h.fee : '')
       : LIVE.players[h.winner] + ' 贏 ' + LIVE.players[h.loser] + '　+' + h.amount;
     var badge = h.type === 'selfDraw'
       ? '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--amber-bg);color:var(--amber);font-weight:600;flex-shrink:0">自摸</span>'
       : '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg);color:var(--text2);font-weight:600;flex-shrink:0">放槍</span>';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">' +
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">' +
       badge + '<span style="font-size:13px;flex:1">' + desc + '</span>' +
-      (isLast ? '<button onclick="undoHand()" style="font-size:11px;padding:3px 8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);border-radius:6px;cursor:pointer;flex-shrink:0">撤銷</button>' : '') +
+      '<button onclick="editHand(' + realIdx + ')" style="font-size:11px;padding:3px 8px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);border-radius:6px;cursor:pointer;flex-shrink:0">✏️</button>' +
+      '<button onclick="deleteHand(' + realIdx + ')" style="font-size:11px;padding:3px 8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);border-radius:6px;cursor:pointer;flex-shrink:0">🗑</button>' +
       '</div>';
   }).join('');
   el.innerHTML = '<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">本場手牌（共 ' + LIVE.hands.length + ' 手）</div>' + rows;
 }
 
 function openHandModal() {
-  lvWinner = -1; lvLoser = -1; lvType = 'discard';
+  lvWinner = -1; lvLoser = -1; lvType = 'discard'; lvEditIdx = -1; lvInitAmount = ''; lvInitFee = '';
   renderHandModal();
   document.getElementById('live-hand-modal').style.display = 'flex';
+}
+
+function editHand(idx) {
+  var h = LIVE.hands[idx];
+  lvWinner = h.winner;
+  lvLoser = h.type === 'discard' ? h.loser : -1;
+  lvType = h.type;
+  lvEditIdx = idx;
+  lvInitAmount = String(h.amount);
+  lvInitFee = h.type === 'selfDraw' ? String(h.fee || 0) : '';
+  renderHandModal();
+  document.getElementById('live-hand-modal').style.display = 'flex';
+}
+
+function deleteHand(idx) {
+  if (!confirm('確定刪除這手紀錄？')) return;
+  reverseHand(LIVE.hands[idx]);
+  LIVE.hands.splice(idx, 1);
+  renderLiveTable();
+  renderLiveHands();
+  tip('已刪除');
+}
+
+function reverseHand(h) {
+  if (h.type === 'discard') {
+    LIVE.scores[h.winner] -= h.amount;
+    LIVE.scores[h.loser] += h.amount;
+  } else {
+    for (var i = 0; i < 4; i++) {
+      if (i === h.winner) { LIVE.scores[i] -= h.amount * 3; }
+      else { LIVE.scores[i] += h.amount; LIVE.fees[i] -= h.fee; }
+    }
+  }
 }
 function closeHandModal() { document.getElementById('live-hand-modal').style.display = 'none'; }
 
@@ -1215,10 +1249,10 @@ function renderHandModal() {
 
   var amountLabel = lvType === 'selfDraw' ? '每人金額' : '金額';
   var amountHtml = '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">' + amountLabel + '</div>' +
-    '<input type="number" id="lh-amount" placeholder="請輸入金額" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:16px;text-align:center"></div>';
+    '<input type="number" id="lh-amount" value="' + lvInitAmount + '" placeholder="請輸入金額" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:16px;text-align:center"></div>';
 
   var feeHtml = lvType === 'selfDraw'
-    ? '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">台費（選填，每人）</div><input type="number" id="lh-fee" placeholder="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:16px;text-align:center"></div>'
+    ? '<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">台費（選填，每人）</div><input type="number" id="lh-fee" value="' + lvInitFee + '" placeholder="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:16px;text-align:center"></div>'
     : '<input id="lh-fee" type="hidden" value="0">';
 
   document.getElementById('lh-form').innerHTML = winnerHtml + typeHtml + loserHtml + amountHtml + feeHtml;
@@ -1232,19 +1266,23 @@ function confirmHand() {
   if (lvWinner < 0) { tip('請選擇贏家'); return; }
   var amount = parseInt(document.getElementById('lh-amount').value) || 0;
   if (!amount) { tip('請輸入金額'); return; }
+  if (lvType === 'discard' && lvLoser < 0) { tip('請選擇放槍者'); return; }
+  if (lvEditIdx >= 0) reverseHand(LIVE.hands[lvEditIdx]);
+  var newHand;
   if (lvType === 'discard') {
-    if (lvLoser < 0) { tip('請選擇放槍者'); return; }
     LIVE.scores[lvWinner] += amount;
     LIVE.scores[lvLoser] -= amount;
-    LIVE.hands.push({ type: 'discard', winner: lvWinner, loser: lvLoser, amount: amount });
+    newHand = { type: 'discard', winner: lvWinner, loser: lvLoser, amount: amount };
   } else {
     var fee = parseInt(document.getElementById('lh-fee').value) || 0;
     for (var i = 0; i < 4; i++) {
       if (i === lvWinner) { LIVE.scores[i] += amount * 3; }
       else { LIVE.scores[i] -= amount; LIVE.fees[i] += fee; }
     }
-    LIVE.hands.push({ type: 'selfDraw', winner: lvWinner, amount: amount, fee: fee });
+    newHand = { type: 'selfDraw', winner: lvWinner, amount: amount, fee: fee };
   }
+  if (lvEditIdx >= 0) { LIVE.hands[lvEditIdx] = newHand; lvEditIdx = -1; }
+  else { LIVE.hands.push(newHand); }
   closeHandModal();
   renderLiveTable();
   renderLiveHands();
@@ -1253,15 +1291,7 @@ function confirmHand() {
 function undoHand() {
   if (!LIVE.hands.length) return;
   var h = LIVE.hands.pop();
-  if (h.type === 'discard') {
-    LIVE.scores[h.winner] -= h.amount;
-    LIVE.scores[h.loser] += h.amount;
-  } else {
-    for (var i = 0; i < 4; i++) {
-      if (i === h.winner) { LIVE.scores[i] -= h.amount * 3; }
-      else { LIVE.scores[i] += h.amount; LIVE.fees[i] -= h.fee; }
-    }
-  }
+  reverseHand(h);
   renderLiveTable();
   renderLiveHands();
   tip('已撤銷最後一手');
