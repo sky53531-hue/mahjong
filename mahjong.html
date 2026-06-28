@@ -284,6 +284,7 @@
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
       <span style="font-size:12px;color:var(--text2);align-self:center">快選：</span>
+      <button class="btn" style="font-size:12px;padding:4px 10px" onclick="document.getElementById('r-from').value='';document.getElementById('r-to').value='';renderRank()">全部</button>
       <button class="btn" style="font-size:12px;padding:4px 10px" onclick="setQ(1,'r-from','r-to',renderRank)">Q1</button>
       <button class="btn" style="font-size:12px;padding:4px 10px" onclick="setQ(2,'r-from','r-to',renderRank)">Q2</button>
       <button class="btn" style="font-size:12px;padding:4px 10px" onclick="setQ(3,'r-from','r-to',renderRank)">Q3</button>
@@ -350,6 +351,7 @@
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
       <span style="font-size:12px;color:var(--text2);align-self:center">快選：</span>
+      <button class="btn" style="font-size:12px;padding:4px 10px" onclick="clearRecF()">全部</button>
       <button class="btn" style="font-size:12px;padding:4px 10px" onclick="setQ(1,'f-from','f-to',renderRec)">Q1</button>
       <button class="btn" style="font-size:12px;padding:4px 10px" onclick="setQ(2,'f-from','f-to',renderRec)">Q2</button>
       <button class="btn" style="font-size:12px;padding:4px 10px" onclick="setQ(3,'f-from','f-to',renderRec)">Q3</button>
