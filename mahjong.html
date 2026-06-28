@@ -268,6 +268,9 @@
         <button class="btn" onclick="clearInputs()">↺ 重新輸入</button>
       </div>
     </div>
+    <div style="text-align:center;margin-top:16px;padding-bottom:8px">
+      <button onclick="window.scrollTo({top:0,behavior:'smooth'})" style="font-size:12px;padding:6px 18px;background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:8px;cursor:pointer">↑ 返回最上方</button>
+    </div>
   </div>
 
   <!-- 排行榜 -->
@@ -327,8 +330,9 @@
     </div>
     <div id="v-sum"></div>
     <div id="v-det" style="display:none"></div>
-    <div style="text-align:center;margin-top:16px;padding-bottom:8px">
+    <div style="text-align:center;margin-top:16px;padding-bottom:8px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
       <button onclick="showTrash()" style="font-size:12px;padding:6px 18px;background:var(--red-bg);color:var(--red);border:1px solid rgba(163,45,45,.3);border-radius:8px;cursor:pointer">🗑 最近刪除紀錄</button>
+      <button onclick="window.scrollTo({top:0,behavior:'smooth'})" style="font-size:12px;padding:6px 18px;background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:8px;cursor:pointer">↑ 返回最上方</button>
     </div>
   </div>
 
@@ -547,7 +551,7 @@
 var BIN_ID = '69fef118250b1311c3258d94';
 var API_KEY = '$2a$10$q1WoCHyQLiQJWNmgQYJ2TuXwc0oik.de.wYuLJ7rtr8G8oHLEJkP.';
 var BASE = 'https://api.jsonbin.io/v3/b/' + BIN_ID;
-var P = [], R = [], TRASH = [], curView = 'sum';
+var P = [], R = [], TRASH = [], curView = 'sum', detPage = 1;
 var PROFILES = {};
 var currentProfilePlayer = null;
 var editId = null, editRows = [];
@@ -974,8 +978,15 @@ function clearRecF() {
 }
 
 function renderRec() {
+  detPage = 1;
   var list = getFiltered();
   if (curView === 'sum') renderSum(list); else renderDet(list);
+}
+
+function detPageGo(page) {
+  detPage = page;
+  renderDet(getFiltered());
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderSum(list) {
@@ -1017,7 +1028,12 @@ function renderSum(list) {
 function renderDet(list) {
   var el = document.getElementById('v-det');
   if (!list.length) { el.innerHTML = '<div class="empty">尚無符合的紀錄</div>'; return; }
-  el.innerHTML = list.map(function(r) {
+  var PAGE_SIZE = 10;
+  var totalPages = Math.ceil(list.length / PAGE_SIZE);
+  if (detPage > totalPages) detPage = totalPages;
+  if (detPage < 1) detPage = 1;
+  var pageList = list.slice((detPage - 1) * PAGE_SIZE, detPage * PAGE_SIZE);
+  var cards = pageList.map(function(r) {
     var fe = r.fe || {};
     var pcards = Object.keys(r.sc).map(function(p) {
       var v = r.sc[p], fv = fe[p] || 0, nt = f2(v - fv);
@@ -1035,6 +1051,12 @@ function renderDet(list) {
       '</div>' +
       '</div><div class="det-players">' + pcards + '</div></div>';
   }).join('');
+  var pager = '<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 0">' +
+    '<button onclick="detPageGo(' + (detPage - 1) + ')" ' + (detPage <= 1 ? 'disabled' : '') + ' style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:13px' + (detPage <= 1 ? ';opacity:.35;cursor:default' : '') + '">‹ 上一頁</button>' +
+    '<span style="font-size:12px;color:var(--text2)">第 <b>' + detPage + '</b> / ' + totalPages + ' 頁　共 ' + list.length + ' 筆</span>' +
+    '<button onclick="detPageGo(' + (detPage + 1) + ')" ' + (detPage >= totalPages ? 'disabled' : '') + ' style="padding:6px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer;font-size:13px' + (detPage >= totalPages ? ';opacity:.35;cursor:default' : '') + '">下一頁 ›</button>' +
+    '</div>';
+  el.innerHTML = pager + cards + pager;
 }
 
 async function delR(id) {
