@@ -393,9 +393,12 @@
 
     <div id="live-game" style="display:none">
       <div id="live-table-wrap" style="margin-bottom:16px"></div>
-      <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div style="display:flex;gap:10px;margin-bottom:8px">
         <button class="btn btn-primary" style="flex:1;padding:12px;font-size:14px" onclick="openHandModal()">＋ 記錄一手</button>
         <button onclick="liveSettle()" style="padding:12px 16px;border-radius:var(--radius);border:1px solid var(--red);background:var(--red-bg);color:var(--red);cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0">🏁 結算儲存</button>
+      </div>
+      <div style="margin-bottom:16px">
+        <button onclick="liveAbort()" style="width:100%;padding:8px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px">↩ 退出該局（不儲存）</button>
       </div>
       <div id="live-hands-list"></div>
     </div>
@@ -1154,12 +1157,12 @@ function renderLiveTable() {
       '</div>';
   }
   var tableCenter =
-    '<div style="width:90px;height:90px;background:radial-gradient(circle at 35% 35%,#2d6b20,#0d3008);border-radius:50%;border:5px solid #5c3209;box-shadow:0 0 0 2px #8b5e2a,0 6px 24px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">' +
+    '<div style="width:90px;height:90px;background:radial-gradient(circle at 35% 35%,#3d8f2a,#1a4d0d);border-radius:50%;border:5px solid #7a4510;box-shadow:0 0 0 2px #c08840,0 6px 24px rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">' +
     '<div style="font-size:34px;line-height:1">🀄</div>' +
     '<div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;letter-spacing:1px">柒樓</div>' +
     '</div>';
   var html =
-    '<div style="background:linear-gradient(160deg,#1a1a18,#232320);border-radius:20px;padding:20px 12px;border:1px solid #333">' +
+    '<div style="background:linear-gradient(160deg,#2a2a27,#343430);border-radius:20px;padding:20px 12px;border:1px solid #444">' +
     '<div style="display:flex;justify-content:center;margin-bottom:16px">' + seat(0) + '</div>' +
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px">' +
     seat(3) + tableCenter + seat(1) +
@@ -1305,6 +1308,14 @@ function undoHand() {
   renderLiveTable();
   renderLiveHands();
   tip('已撤銷最後一手');
+}
+
+function liveAbort() {
+  if (!confirm('確定退出該局？\n目前所有戰況紀錄將清空，無法復原。')) return;
+  LIVE = { active: false, date: '', ses: '', feeRate: 50, players: ['','','',''], scores: [0,0,0,0], fees: [0,0,0,0], hands: [] };
+  document.getElementById('live-setup').style.display = 'block';
+  document.getElementById('live-game').style.display = 'none';
+  tip('已退出該局');
 }
 
 async function liveSettle() {
