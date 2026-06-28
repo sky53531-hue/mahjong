@@ -392,17 +392,7 @@
     </div>
 
     <div id="live-game" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:16px">
-        <div></div>
-        <div id="live-seat-0" style="text-align:center"></div>
-        <div></div>
-        <div id="live-seat-3"></div>
-        <div style="width:68px;height:68px;background:linear-gradient(135deg,#2d5a1e,#1a3a0e);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:auto;box-shadow:0 2px 10px rgba(0,0,0,.25)">🀄</div>
-        <div id="live-seat-1" style="text-align:right"></div>
-        <div></div>
-        <div id="live-seat-2" style="text-align:center"></div>
-        <div></div>
-      </div>
+      <div id="live-table-wrap" style="margin-bottom:16px"></div>
       <div style="display:flex;gap:10px;margin-bottom:16px">
         <button class="btn btn-primary" style="flex:1;padding:12px;font-size:14px" onclick="openHandModal()">＋ 記錄一手</button>
         <button onclick="liveSettle()" style="padding:12px 16px;border-radius:var(--radius);border:1px solid var(--red);background:var(--red-bg);color:var(--red);cursor:pointer;font-size:13px;font-weight:600;flex-shrink:0">🏁 結算儲存</button>
@@ -1148,17 +1138,35 @@ function liveStart() {
 
 function renderLiveTable() {
   var pos = ['上家','右家','下家','左家'];
-  [0,1,2,3].forEach(function(i) {
+  function seat(i) {
     var sc = LIVE.scores[i];
-    var border = sc > 0 ? 'var(--green)' : sc < 0 ? 'var(--red)' : 'var(--border)';
-    var color = sc > 0 ? 'var(--green)' : sc < 0 ? 'var(--red)' : 'var(--text2)';
-    document.getElementById('live-seat-' + i).innerHTML =
-      '<div style="background:var(--surface);border:2px solid ' + border + ';border-radius:12px;padding:8px 10px;display:inline-block;min-width:72px">' +
-      '<div style="font-size:10px;color:var(--text2);margin-bottom:2px">' + pos[i] + '</div>' +
-      '<div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px">' + LIVE.players[i] + '</div>' +
-      '<div style="font-size:16px;font-weight:800;color:' + color + '">' + (sc > 0 ? '+' : '') + sc + '</div>' +
+    var prof = PROFILES[LIVE.players[i]] || {};
+    var borderC = sc > 0 ? '#4ade80' : sc < 0 ? '#f87171' : '#555';
+    var scoreC = sc > 0 ? '#4ade80' : sc < 0 ? '#f87171' : '#aaa';
+    var avatar = prof.avatar
+      ? '<img src="' + prof.avatar + '" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:3px solid ' + borderC + ';display:block;margin:0 auto 4px">'
+      : '<div style="width:50px;height:50px;border-radius:50%;background:#2a2a2a;border:3px solid ' + borderC + ';display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 4px">👤</div>';
+    return '<div style="text-align:center">' +
+      avatar +
+      '<div style="font-size:10px;color:#888;margin-bottom:1px">' + pos[i] + '</div>' +
+      '<div style="font-size:12px;font-weight:700;color:#eee;max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto">' + LIVE.players[i] + '</div>' +
+      '<div style="font-size:17px;font-weight:800;color:' + scoreC + ';margin-top:2px">' + (sc > 0 ? '+' : '') + sc + '</div>' +
       '</div>';
-  });
+  }
+  var tableCenter =
+    '<div style="width:90px;height:90px;background:radial-gradient(circle at 35% 35%,#2d6b20,#0d3008);border-radius:50%;border:5px solid #5c3209;box-shadow:0 0 0 2px #8b5e2a,0 6px 24px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">' +
+    '<div style="font-size:34px;line-height:1">🀄</div>' +
+    '<div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:2px;letter-spacing:1px">柒樓</div>' +
+    '</div>';
+  var html =
+    '<div style="background:linear-gradient(160deg,#1a1a18,#232320);border-radius:20px;padding:20px 12px;border:1px solid #333">' +
+    '<div style="display:flex;justify-content:center;margin-bottom:16px">' + seat(0) + '</div>' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px">' +
+    seat(3) + tableCenter + seat(1) +
+    '</div>' +
+    '<div style="display:flex;justify-content:center">' + seat(2) + '</div>' +
+    '</div>';
+  document.getElementById('live-table-wrap').innerHTML = html;
 }
 
 function renderLiveHands() {
