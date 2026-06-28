@@ -298,6 +298,20 @@
       </div>
     </div>
 
+    <div style="font-size:14px;font-weight:600;margin:20px 0 10px">💰 輸贏合計排行榜</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">不扣參賽費，純看桌上輸贏金額</div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>名次</th><th>姓名</th><th>場次</th>
+            <th>輸贏合計</th><th>最佳單場</th><th>最差單場</th><th>勝場率</th>
+          </tr></thead>
+          <tbody id="sc-body"></tbody>
+        </table>
+      </div>
+    </div>
+
     <div style="font-size:14px;font-weight:600;margin:20px 0 10px">🀄 場均自摸排行榜</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px">計算方式：各場參賽費 ÷ 底台（50 或 100）= 自摸次數，自摸次數 ÷ 出賽場次 = 場均自摸</div>
     <div class="card">
@@ -924,6 +938,26 @@ function renderRank() {
         '<td><span class="' + (s.sc > 0 ? 'plus' : s.sc < 0 ? 'minus' : '') + '">' + fs(s.sc) + '</span></td>' +
         '<td style="color:var(--red)">' + f2(s.fe) + '</td>' +
         '<td><span class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '" style="font-size:14px">' + fs(net) + '</span></td>' +
+        '<td><span class="bw">' + (s.best >= 0 ? '+' : '') + s.best + '</span></td>' +
+        '<td><span class="bl">' + s.worst + '</span></td>' +
+        '<td><span class="' + (wr >= 50 ? 'bw' : 'bn') + '">' + s.w + '勝(' + wr + '%)</span></td></tr>';
+    }).join('');
+  }
+
+  // 輸贏合計排行
+  var scSorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
+    .sort(function(a, b) { return b[1].sc - a[1].sc; });
+  var scTb = document.getElementById('sc-body');
+  if (!scSorted.length) { scTb.innerHTML = '<tr><td colspan="7" class="empty">尚無紀錄</td></tr>'; }
+  else {
+    scTb.innerHTML = scSorted.map(function(e, i) {
+      var p = e[0], s = e[1]; var wr = Math.round(s.w / s.g * 100);
+      var pos = i < 3 ? '<span class="pos p' + (i + 1) + '">' + (i + 1) + '</span>' : '<span style="font-size:12px;color:var(--text2)">' + (i + 1) + '</span>';
+      return '<tr>' +
+        '<td>' + pos + '</td>' +
+        '<td style="font-weight:600">' + p + '</td>' +
+        '<td>' + s.g + '</td>' +
+        '<td><span class="' + (s.sc > 0 ? 'plus' : s.sc < 0 ? 'minus' : '') + '" style="font-size:14px">' + fs(s.sc) + '</span></td>' +
         '<td><span class="bw">' + (s.best >= 0 ? '+' : '') + s.best + '</span></td>' +
         '<td><span class="bl">' + s.worst + '</span></td>' +
         '<td><span class="' + (wr >= 50 ? 'bw' : 'bn') + '">' + s.w + '勝(' + wr + '%)</span></td></tr>';
