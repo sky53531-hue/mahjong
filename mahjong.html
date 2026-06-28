@@ -1069,14 +1069,14 @@ function renderSum(list) {
   var st = getStats(list);
   var totalZimo = f2(Object.values(st).reduce(function(a, s) { return a + s.zimo; }, 0));
   var sorted = Object.entries(st).filter(function(e) { return e[1].g > 0; })
-    .sort(function(a, b) { return f2(b[1].sc - b[1].fe) - f2(a[1].sc - a[1].fe); });
+    .sort(function(a, b) { return f2(b[1].sc) - f2(a[1].sc); });
   var html = '<div class="card" style="margin-bottom:14px">' +
     '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">' + lbl + '　共 <b>' + list.length + '</b> 場　總參賽費：<b>' + f2(fees) + '</b>　自摸次數：<b>' + totalZimo + '</b></div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px">' +
     sorted.slice(0, 4).map(function(e, i) {
-      var net = f2(e[1].sc - e[1].fe); var m = ['🥇','🥈','🥉',''][i];
+      var sc = f2(e[1].sc); var m = ['🥇','🥈','🥉',''][i];
       return '<div style="text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">' + m + ' ' + e[0] + '</div>' +
-        '<div style="font-size:16px;font-weight:700" class="' + (net > 0 ? 'plus' : net < 0 ? 'minus' : '') + '">' + fs(net) + '</div></div>';
+        '<div style="font-size:16px;font-weight:700" class="' + (sc > 0 ? 'plus' : sc < 0 ? 'minus' : '') + '">' + fs(sc) + '</div></div>';
     }).join('') + '</div></div>';
   if (!sorted.length) { html += '<div class="empty">尚無符合的紀錄</div>'; }
   else {
