@@ -282,6 +282,13 @@
       <input type="date" id="r-to" onchange="renderRank()">
       <button class="btn" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('r-from').value='';document.getElementById('r-to').value='';renderRank()">清除</button>
     </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:12px;color:var(--text2);align-self:center">快選：</span>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(1,'r-from','r-to',renderRank)">Q1（1－3月）</button>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(2,'r-from','r-to',renderRank)">Q2（4－6月）</button>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(3,'r-from','r-to',renderRank)">Q3（7－9月）</button>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(4,'r-from','r-to',renderRank)">Q4（10－12月）</button>
+    </div>
     <div class="mgrid" id="r-meta"></div>
 
     <div style="font-size:14px;font-weight:600;margin-bottom:4px">💰 輸贏合計排行榜</div>
@@ -340,6 +347,13 @@
       <label>參賽者：</label>
       <select id="f-p" onchange="renderRec()"><option value="">全部</option></select>
       <button class="btn" style="font-size:12px;padding:5px 12px" onclick="clearRecF()">清除</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <span style="font-size:12px;color:var(--text2);align-self:center">快選：</span>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(1,'f-from','f-to',renderRec)">Q1（1－3月）</button>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(2,'f-from','f-to',renderRec)">Q2（4－6月）</button>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(3,'f-from','f-to',renderRec)">Q3（7－9月）</button>
+      <button class="btn" style="font-size:12px;padding:4px 12px" onclick="setQ(4,'f-from','f-to',renderRec)">Q4（10－12月）</button>
     </div>
     <div class="vtog">
       <button class="vb on" onclick="switchView('sum',this)">區間總統計</button>
@@ -1011,6 +1025,14 @@ function clearRecF() {
   document.getElementById('f-to').value = '';
   document.getElementById('f-p').value = '';
   renderRec();
+}
+
+function setQ(q, fromId, toId, cb) {
+  var y = new Date().getFullYear();
+  var ranges = { 1: ['01-01','03-31'], 2: ['04-01','06-30'], 3: ['07-01','09-30'], 4: ['10-01','12-31'] };
+  document.getElementById(fromId).value = y + '-' + ranges[q][0];
+  document.getElementById(toId).value = y + '-' + ranges[q][1];
+  cb();
 }
 
 function renderRec() {
