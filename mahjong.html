@@ -204,6 +204,25 @@
   <button class="nav-btn" onclick="goTab('mgr',this)">⚙ 參賽者管理</button>
 </nav>
 
+<!-- 儲存失敗橫幅 -->
+<div id="mj-save-err" style="display:none;position:fixed;top:0;left:0;right:0;z-index:1000;background:#dc2626;color:#fff;padding:14px 16px;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.4)">
+  <div style="flex:1">
+    <div style="font-weight:700;font-size:14px">⚠ 雲端儲存失敗！</div>
+    <div style="font-size:12px;opacity:.9">資料只在本機，請確認網路後按右上角🔄重新整理，否則關閉 App 後可能遺失。</div>
+  </div>
+  <button onclick="document.getElementById('mj-save-err').style.display='none'" style="border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px">知道了</button>
+</div>
+
+<!-- 快照還原 Modal -->
+<div id="snap-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px">
+  <div style="background:var(--surface);border-radius:16px;padding:20px;max-width:480px;width:100%;margin:auto;position:relative">
+    <button onclick="document.getElementById('snap-modal').style.display='none'" style="position:absolute;top:12px;right:14px;border:none;background:none;font-size:20px;cursor:pointer;color:var(--text2)">✕</button>
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">📦 本機快照</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:14px">每次雲端同步前自動備份，最多保留 10 份</div>
+    <div id="snap-list"></div>
+  </div>
+</div>
+
 <div class="main">
 
   <!-- 新增紀錄 -->
@@ -490,7 +509,13 @@
 
     <!-- 選手卡片列表 -->
     <div style="font-size:13px;color:var(--text2);margin-bottom:16px">點擊選手卡片查看個人資料與戰績</div>
-    <div id="profile-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px"></div>
+    <div id="profile-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px"></div>
+
+    <!-- 資料備份 -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-title">資料備份</div>
+      <button onclick="openSnapModal()" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;cursor:pointer">📦 查看本機快照／還原</button>
+    </div>
   </div>
 
   <!-- 台數計算 -->
@@ -675,21 +700,96 @@ async function apiPut(data) {
   if (!res.ok) throw new Error('寫入失敗');
 }
 
+function mjLocalSave() {
+  try { localStorage.setItem('mj_d', JSON.stringify({ players: P, records: R, profiles: PROFILES, trash: TRASH })); } catch(e) {}
+}
+
+function mjSaveSnapshot() {
+  try {
+    var s = localStorage.getItem('mj_d');
+    if (!s) return;
+    var parsed = JSON.parse(s);
+    var snaps = [];
+    try { snaps = JSON.parse(localStorage.getItem('mj_snaps') || '[]'); } catch(e) {}
+    snaps.unshift({ ts: Date.now(), records: (parsed.records || []).length, data: s });
+    if (snaps.length > 10) snaps = snaps.slice(0, 10);
+    localStorage.setItem('mj_snaps', JSON.stringify(snaps));
+  } catch(e) {}
+}
+
+function openSnapModal() {
+  document.getElementById('snap-modal').style.display = 'flex';
+  var snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem('mj_snaps') || '[]'); } catch(e) {}
+  var el = document.getElementById('snap-list');
+  if (!snaps.length) {
+    el.innerHTML = '<div style="color:var(--text2);font-size:13px;text-align:center;padding:20px 0">目前無快照（快照在下次雲端同步時自動建立）</div>';
+    return;
+  }
+  el.innerHTML = snaps.map(function(s, i) {
+    var d = new Date(s.ts);
+    var dt = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') +
+      ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    return '<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--bg);display:flex;justify-content:space-between;align-items:center">' +
+      '<div><span style="font-weight:700">快照 ' + (i+1) + '</span><span style="color:var(--text2);font-size:12px;margin-left:8px">' + dt + '　共 ' + s.records + ' 筆</span></div>' +
+      '<button onclick="restoreMjSnapshot(' + i + ')" style="font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid #4ade80;background:transparent;color:#4ade80;cursor:pointer">還原</button>' +
+      '</div>';
+  }).join('');
+}
+
+function restoreMjSnapshot(idx) {
+  var snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem('mj_snaps') || '[]'); } catch(e) {}
+  if (!snaps[idx]) { tip('快照不存在'); return; }
+  if (!confirm('確定還原這份快照？目前資料將被覆蓋。')) return;
+  try {
+    var parsed = JSON.parse(snaps[idx].data);
+    P = parsed.players || P;
+    R = parsed.records || [];
+    PROFILES = parsed.profiles || {};
+    TRASH = parsed.trash || [];
+    mjLocalSave();
+    document.getElementById('snap-modal').style.display = 'none';
+    buildEntry(); renderRec(); renderRank();
+    tip('✓ 已從快照還原');
+  } catch(e) { tip('快照還原失敗'); }
+}
+
 async function load() {
   setSyncStatus('loading', '連線中...');
   try {
     var data = await apiGet();
+    mjSaveSnapshot(); // 覆蓋前先備份本機
     P = data.players || ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
     R = data.records || [];
     PROFILES = data.profiles || {};
     TRASH = data.trash || [];
+    mjLocalSave();
     setSyncStatus('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'}));
   } catch(e) {
-    setSyncStatus('err', '連線失敗');
-    P = ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
-    R = [];
-    PROFILES = {};
-    tip('⚠ 無法連線至資料庫');
+    // 雲端失敗時嘗試從本機讀取
+    var local = localStorage.getItem('mj_d');
+    if (local) {
+      try {
+        var ldata = JSON.parse(local);
+        P = ldata.players || ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
+        R = ldata.records || [];
+        PROFILES = ldata.profiles || {};
+        TRASH = ldata.trash || [];
+        setSyncStatus('err', '離線模式（本機資料）');
+        tip('⚠ 雲端連線失敗，已載入本機備份');
+      } catch(le) {
+        setSyncStatus('err', '連線失敗');
+        P = ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
+        R = []; PROFILES = {};
+        tip('⚠ 無法連線至資料庫');
+      }
+    } else {
+      setSyncStatus('err', '連線失敗');
+      P = ['玩家A','玩家B','玩家C','玩家D','玩家E','玩家F','玩家G','玩家H'];
+      R = []; PROFILES = {};
+      tip('⚠ 無法連線至資料庫');
+    }
   }
   buildEntry();
 }
@@ -708,11 +808,13 @@ async function refreshData() {
 
 async function saveAll() {
   setSyncStatus('loading', '儲存中...');
+  mjLocalSave(); // 先存本機
   try {
     await apiPut({ players: P, records: R, profiles: PROFILES, trash: TRASH });
     setSyncStatus('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'}));
   } catch(e) {
     setSyncStatus('err', '儲存失敗');
+    document.getElementById('mj-save-err').style.display = 'flex';
     tip('⚠ 儲存失敗，請檢查網路');
   }
 }
